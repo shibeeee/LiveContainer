@@ -80,7 +80,8 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
     
     @AppStorage("LCMultitaskMode", store: LCUtils.appGroupUserDefault) var multitaskMode: MultitaskMode = .virtualWindow
     @AppStorage("darkModeIcon", store: LCUtils.appGroupUserDefault) private var darkModeIcon = false
-    @AppStorage("LCAppListFilter", store: LCUtils.appGroupUserDefault) private var appListFilter: AppListFilter = .all
+    // not persisted, so a forgotten filter never makes apps look missing after a relaunch
+    @State private var appListFilter: AppListFilter = .all
     
     @State private var isViewAppeared = false
     
@@ -106,7 +107,8 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
     }
     
     var filteredHiddenApps: [LCAppModel] {
-        let apps = sortedHiddenApps.filter { appListFilter.matches($0) }
+        // filter hidden apps only once unlocked, so the placeholder count reveals nothing about them
+        let apps = sharedModel.isHiddenAppUnlocked ? sortedHiddenApps.filter { appListFilter.matches($0) } : sortedHiddenApps
         if searchContext.debouncedQuery.isEmpty || !sharedModel.isHiddenAppUnlocked {
             return apps
         } else {
@@ -271,12 +273,6 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                                 customSortViewPresent = true
                             }
                         }
-                        Picker("lc.appList.filter.title".loc, selection: $appListFilter) {
-                            ForEach(AppListFilter.allCases, id: \.self) { filter in
-                                Label(filter.displayName, systemImage: filter.systemImage)
-                                    .tag(filter)
-                            }
-                        }
                         if sharedAppSortManager.appSortType == .custom {
                             Divider()
                             
@@ -286,6 +282,16 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                                 Label("lc.appList.sort.customManage".loc, systemImage: "slider.horizontal.3")
                             }
                         }
+                        Divider()
+                        Picker(selection: $appListFilter) {
+                            ForEach(AppListFilter.allCases, id: \.self) { filter in
+                                Label(filter.displayName, systemImage: filter.systemImage)
+                                    .tag(filter)
+                            }
+                        } label: {
+                            Label("lc.appList.filter.title".loc, systemImage: appListFilter.systemImage)
+                        }
+                        .pickerStyle(.menu)
                     } label: {
                         Label("Sort by", systemImage: "line.3.horizontal.decrease.circle")
                     }

@@ -14,8 +14,6 @@ cd "$ROOT/sidestore-src"
 git submodule update --init --recursive --depth 1
 echo "SideStore source: $(git rev-parse HEAD)"
 
-git config user.name "fork-build"
-git config user.email "fork-build@localhost"
 for patch in "$ROOT"/SideStorePatches/*.patch; do
     [ -e "$patch" ] || continue
     echo "Applying $(basename "$patch")"
@@ -28,7 +26,8 @@ for patch in "$ROOT"/SideStorePatches/SideSign/*.patch; do
     git -C Dependencies/SideSign apply --3way --whitespace=nowarn "$patch"
 done
 
-# Same binary artifacts SideStore's own CI pre-fetches for Swift Package Manager.
+# Same binary artifacts SideStore's own CI pre-fetches for Swift Package Manager
+# (SwiftPM still checks them against the checksums in the package manifests).
 ART="$HOME/Library/Caches/org.swift.swiftpm/artifacts"
 mkdir -p "$ART"
 OPENSSL="$ART/https___github_com_krzyzanowskim_OpenSSL_releases_download_3_6_2000_OpenSSL_xcframework_zip"

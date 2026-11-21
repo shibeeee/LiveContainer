@@ -7,4 +7,6 @@ packages/
 xcuserdata
 Resources/Frameworks/OpenSSL.framework
 apps_nightly.json
-Dependencies/OpenSSL.xcframeworksidestore-src/
+Dependencies/OpenSSL.xcframework
+sidestore-src/
+

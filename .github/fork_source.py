@@ -4,7 +4,7 @@ Built-in SideStore in fork builds reads this file (see LCUpdateSourceURL in
 prepare_dependencies.sh), so each new nightly shows up as an update on the device.
 
 Usage: python fork_source.py <ipa> <out.json>
-Env: GITHUB_REPOSITORY, COMMIT_SHA, COMMIT_MSG, RUN_URL, UPSTREAM_SHA, SIDESTORE_ASSET
+Env: GITHUB_REPOSITORY, COMMIT_SHA, COMMIT_MSG, RUN_URL, UPSTREAM_SHA, SIDESTORE_SOURCE
 """
 import json
 import os
@@ -53,8 +53,8 @@ def main():
         "name": f"LiveContainer + SideStore ({repo})",
         "identifier": f"com.livecontainer.source.fork.{repo.replace('/', '.').lower()}",
         "website": f"https://github.com/{repo}",
-        "subtitle": "Private nightly builds of LiveContainer + SideStore.",
-        "description": "Nightly builds from this fork. Each build merges the latest LiveContainer and SideStore nightly.",
+        "subtitle": "Nightly builds of LiveContainer + SideStore from this fork.",
+        "description": "Nightly builds from this fork. Each build includes the latest LiveContainer and SideStore.",
         "tintColor": "#0784FC",
         "iconURL": f"{raw}/AppIcon1024.png",
         "apps": [{

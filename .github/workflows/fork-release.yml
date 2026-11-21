@@ -2,7 +2,7 @@ name: Fork - Build and Release Nightly
 
 # Builds this fork and publishes it as the "nightly" release on this fork only,
 # with an AltSource (apps_fork.json) that built-in SideStore uses to update LiveContainer.
-# Started by sync.yml whenever upstream LiveContainer or the SideStore nightly changes.
+# Started by sync.yml whenever main, SideStore's source or the SideStore nightly changes.
 
 on:
   workflow_dispatch:
@@ -31,6 +31,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
+          # the commit the build job built, even if main moved on meanwhile
+          ref: ${{ github.sha }}
           fetch-depth: 0
       - name: Download LiveContainer.ipa
         uses: actions/download-artifact@v8
@@ -72,13 +74,13 @@ jobs:
           cat build-info.json
       - name: Publish release
         run: |
-          notes="Private nightly of ${{ github.repository }} at ${COMMIT_SHA:0:7}: $COMMIT_MSG
+          notes="Nightly of ${{ github.repository }} at ${COMMIT_SHA:0:7}: $COMMIT_MSG
 
           Upstream LiveContainer: ${UPSTREAM_SHA:0:7}
           SideStore source: ${SIDESTORE_SOURCE:0:7} (LiveContainer/SideStore, with SideStorePatches applied)
           Built by $RUN_URL
 
-          To get automatic updates, add this source in SideStore: https://github.com/${{ github.repository }}/releases/download/nightly/apps_fork.json"
+          The built-in SideStore updates LiveContainer from this source: https://github.com/${{ github.repository }}/releases/download/nightly/apps_fork.json"
           files="LiveContainer.ipa LiveContainer+SideStore.ipa apps_fork.json build-info.json"
           if gh release view --repo "$GITHUB_REPOSITORY" nightly >/dev/null 2>&1; then
             gh release upload --repo "$GITHUB_REPOSITORY" nightly $files --clobber
