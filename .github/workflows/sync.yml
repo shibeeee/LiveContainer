@@ -1,7 +1,7 @@
 name: Fork - Sync Upstream
 
 # Every 6 hours: merge new commits from LiveContainer/LiveContainer into this fork's main,
-# and rebuild when upstream or the LiveContainer/SideStore nightly changed since the last
+# and rebuild when upstream, SideStore's source or its nightly changed since the last
 # fork release. Opens an issue on this fork when a merge needs a person.
 
 on:
@@ -82,13 +82,16 @@ jobs:
         run: |
           current_ss=$(gh api repos/LiveContainer/SideStore/releases/tags/nightly \
             --jq '.assets[] | select(.name=="SideStore.ipa") | "\(.id)@\(.updated_at)"')
+          current_src=$(git ls-remote https://github.com/LiveContainer/SideStore.git refs/heads/LiveContainerSupport | cut -f1)
           head=$(git rev-parse HEAD)
           last=$(gh release download nightly -p build-info.json -O - 2>/dev/null || echo '{}')
           last_commit=$(echo "$last" | jq -r '.commit // ""')
           last_ss=$(echo "$last" | jq -r '.sidestore_asset // ""')
+          last_src=$(echo "$last" | jq -r '.sidestore_source // ""')
           echo "main: $head (last release: $last_commit)"
           echo "SideStore nightly: $current_ss (last release: $last_ss)"
-          if [ "$head" != "$last_commit" ] || [ "$current_ss" != "$last_ss" ]; then
+          echo "SideStore source: $current_src (last release: $last_src)"
+          if [ "$head" != "$last_commit" ] || [ "$current_ss" != "$last_ss" ] || [ "$current_src" != "$last_src" ]; then
             echo "rebuild=true" >> $GITHUB_OUTPUT
           fi
 

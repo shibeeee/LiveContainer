@@ -40,10 +40,19 @@ mv ./tmp/SideStoreSupport.framework Payload/LiveContainer.app/Frameworks
 /usr/libexec/PlistBuddy -c "Add :PreferenceSpecifiers:3:Key string LCOpenSideStore" ./Payload/LiveContainer.app/Settings.bundle/Root.plist
 /usr/libexec/PlistBuddy -c "Add :PreferenceSpecifiers:3:DefaultValue bool false" ./Payload/LiveContainer.app/Settings.bundle/Root.plist
 
-# download SideStore
+# get SideStore: forks build it from source with SideStorePatches/, falling back to the nightly
 cd tmp
-wget https://github.com/LiveContainer/SideStore/releases/download/nightly/SideStore.ipa
-# record which SideStore nightly went into this build
+if [ -n "$GITHUB_REPOSITORY" ] && [ "$GITHUB_REPOSITORY" != "LiveContainer/LiveContainer" ] \
+    && bash ../.github/build_sidestore.sh "$PWD/SideStore.ipa"; then
+    echo "Using SideStore built from source"
+else
+    if [ -n "$GITHUB_REPOSITORY" ] && [ "$GITHUB_REPOSITORY" != "LiveContainer/LiveContainer" ]; then
+        echo "::warning title=SideStore source build failed::Using the prebuilt SideStore nightly instead, so SideStorePatches are not in this build."
+    fi
+    rm -f SideStore.ipa
+    wget https://github.com/LiveContainer/SideStore/releases/download/nightly/SideStore.ipa
+fi
+# record which SideStore went into this build
 shasum -a 256 SideStore.ipa
 unzip SideStore.ipa
 cd ..

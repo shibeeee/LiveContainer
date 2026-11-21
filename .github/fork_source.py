@@ -33,7 +33,7 @@ def main():
     description = (
         f"Nightly build of {repo} from {commit}: {message}\n"
         f"Upstream LiveContainer: {os.environ.get('UPSTREAM_SHA', 'unknown')[:7]}\n"
-        f"Bundled SideStore nightly: {os.environ.get('SIDESTORE_ASSET', 'unknown')}\n"
+        f"SideStore source: {os.environ.get('SIDESTORE_SOURCE', 'unknown')[:7]}\n"
         f"Built by {os.environ.get('RUN_URL', '')}"
     )
     release = {

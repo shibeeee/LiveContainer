@@ -50,19 +50,21 @@ jobs:
           asset=$(gh api repos/LiveContainer/SideStore/releases/tags/nightly \
             --jq '.assets[] | select(.name=="SideStore.ipa") | "\(.id)@\(.updated_at)"')
           echo "SIDESTORE_ASSET=$asset" >> $GITHUB_ENV
+          src=$(git ls-remote https://github.com/LiveContainer/SideStore.git refs/heads/LiveContainerSupport | cut -f1)
+          echo "SIDESTORE_SOURCE=$src" >> $GITHUB_ENV
           echo "RUN_URL=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
       - name: Write AltSource and build info
         run: |
           python3 .github/fork_source.py "LiveContainer+SideStore.ipa" apps_fork.json
-          printf '{"commit":"%s","upstream":"%s","sidestore_asset":"%s"}\n' \
-            "$COMMIT_SHA" "$UPSTREAM_SHA" "$SIDESTORE_ASSET" > build-info.json
+          printf '{"commit":"%s","upstream":"%s","sidestore_asset":"%s","sidestore_source":"%s"}\n' \
+            "$COMMIT_SHA" "$UPSTREAM_SHA" "$SIDESTORE_ASSET" "$SIDESTORE_SOURCE" > build-info.json
           cat build-info.json
       - name: Publish release
         run: |
           notes="Private nightly of ${{ github.repository }} at ${COMMIT_SHA:0:7}: $COMMIT_MSG
 
           Upstream LiveContainer: ${UPSTREAM_SHA:0:7}
-          SideStore nightly: $SIDESTORE_ASSET
+          SideStore source: ${SIDESTORE_SOURCE:0:7} (LiveContainer/SideStore, with SideStorePatches applied)
           Built by $RUN_URL
 
           To get automatic updates, add this source in SideStore: https://github.com/${{ github.repository }}/releases/download/nightly/apps_fork.json"
