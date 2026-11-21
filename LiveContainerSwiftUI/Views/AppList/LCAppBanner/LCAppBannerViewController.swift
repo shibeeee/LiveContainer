@@ -160,6 +160,12 @@ final class LCAppBannerViewController: UIViewController, UIContextMenuInteractio
             ) { [weak self] _ in
                 self?.openDataFolder()
             })
+            sectionChildren.append(UIAction(
+                title: "lc.appBanner.backUpDataFolder".loc,
+                image: UIImage(systemName: "externaldrive.badge.plus")
+            ) { [weak self] _ in
+                self?.backUpDataFolder()
+            })
         }
 
         // Multitask Toggle
@@ -242,6 +248,25 @@ final class LCAppBannerViewController: UIViewController, UIContextMenuInteractio
             return
         }
         UIApplication.shared.open(url)
+    }
+
+    // Copies the selected data folder to a place the user picks in Files.
+    private func backUpDataFolder() {
+        guard let folderName = configuration.model.uiSelectedContainer?.folderName else {
+            return
+        }
+        let folderURL = LCPath.dataPath.appendingPathComponent(folderName, isDirectory: true)
+        guard FileManager.default.fileExists(atPath: folderURL.path) else {
+            showError("lc.appBanner.noDataFolder".loc)
+            return
+        }
+        guard viewIfLoaded?.window != nil, presentedViewController == nil else {
+            return
+        }
+        let documentPicker = UIDocumentPickerViewController(forExporting: [folderURL], asCopy: true)
+        documentPicker.delegate = self
+        documentPicker.presentationController?.delegate = self
+        present(documentPicker, animated: true)
     }
 
     private func uninstall() async {
