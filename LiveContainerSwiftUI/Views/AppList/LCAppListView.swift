@@ -206,7 +206,6 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
             }
             .navigationBarProgressBar(show:$installprogressVisible, progress: $installProgressPercentage)
             .coordinateSpace(name: "scroll")
-            .background(Color(.systemGroupedBackground))
             .onAppear {
                 if !didAppear {
                     onAppear()

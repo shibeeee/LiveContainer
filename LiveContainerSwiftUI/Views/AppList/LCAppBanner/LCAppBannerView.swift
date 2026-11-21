@@ -157,8 +157,9 @@ final class LCAppBannerRootView: UIView {
         bit32Badge.isHidden = !model.uiIs32bit
         bit32Badge.backgroundColor = UIColor(named: "32BitBadgeColor") ?? .systemBlue
 
-        backgroundColor = UIColor(named: "AppBannerBG") ?? .secondarySystemGroupedBackground
-        visualBackgroundView.backgroundColor = dynamicColors ? mainColor.withAlphaComponent(0.18) : .clear
+        visualBackgroundView.backgroundColor = dynamicColors
+            ? mainColor.withAlphaComponent(0.5)
+            : (UIColor(named: "AppBannerBG") ?? .secondarySystemBackground)
         runControl.update(
             color: accentColor,
             textColor: dynamicColors ? Self.readableTextColor(for: accentColor, traitCollection: traitCollection) : accentColor,

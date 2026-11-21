@@ -541,7 +541,6 @@ struct LCSourcesView: View {
                         }
                         .padding(.vertical)
                     }
-                    .background(Color(.systemGroupedBackground))
                 }
             }
             .navigationTitle("lc.tabView.sources".loc)
@@ -975,7 +974,7 @@ private struct LCSourceAppBanner: View {
     }
     
     private var backgroundColor: Color {
-        dynamicColors ? primaryColor.opacity(0.18) : Color.clear
+        dynamicColors ? primaryColor.opacity(0.5) : Color("AppBannerBG")
     }
     
     private var metadataText: String {
@@ -1055,8 +1054,7 @@ private struct LCSourceAppBanner: View {
         .frame(height: 88)
         .background {
             RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(Color("AppBannerBG"))
-                .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).fill(backgroundColor))
+                .fill(backgroundColor)
         }
     }
 }
