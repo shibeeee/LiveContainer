@@ -80,6 +80,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
     
     @AppStorage("LCMultitaskMode", store: LCUtils.appGroupUserDefault) var multitaskMode: MultitaskMode = .virtualWindow
     @AppStorage("darkModeIcon", store: LCUtils.appGroupUserDefault) private var darkModeIcon = false
+    @AppStorage("LCAppListFilter", store: LCUtils.appGroupUserDefault) private var appListFilter: AppListFilter = .all
     
     @State private var isViewAppeared = false
     
@@ -93,7 +94,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
     }
     
     var filteredApps: [LCAppModel] {
-        let apps = sortedApps
+        let apps = sortedApps.filter { appListFilter.matches($0) }
         if searchContext.debouncedQuery.isEmpty {
             return apps
         } else {
@@ -105,7 +106,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
     }
     
     var filteredHiddenApps: [LCAppModel] {
-        let apps = sortedHiddenApps
+        let apps = sortedHiddenApps.filter { appListFilter.matches($0) }
         if searchContext.debouncedQuery.isEmpty || !sharedModel.isHiddenAppUnlocked {
             return apps
         } else {
@@ -189,7 +190,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                     }
 
                     let appCount = sharedModel.isHiddenAppUnlocked ? filteredApps.count + filteredHiddenApps.count : filteredApps.count
-                    Text(appCount > 0 || searchContext.debouncedQuery != "" ? "lc.appList.appCounter %lld".localizeWithFormat(appCount) : (sharedModel.multiLCStatus == 2 ? "lc.appList.convertToSharedToShowInLC2".loc : "lc.appList.installTip".loc))
+                    Text(appCount > 0 || searchContext.debouncedQuery != "" || appListFilter != .all ? "lc.appList.appCounter %lld".localizeWithFormat(appCount) : (sharedModel.multiLCStatus == 2 ? "lc.appList.convertToSharedToShowInLC2".loc : "lc.appList.installTip".loc))
                         .padding(.horizontal)
                         .foregroundStyle(.gray)
                         .animation(searchContext.isTyping ? nil : .easeInOut, value: appCount)
@@ -268,6 +269,12 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                         .onChange(of: sharedAppSortManager.appSortType) { newValue in
                             if sharedAppSortManager.appSortType == .custom {
                                 customSortViewPresent = true
+                            }
+                        }
+                        Picker("lc.appList.filter.title".loc, selection: $appListFilter) {
+                            ForEach(AppListFilter.allCases, id: \.self) { filter in
+                                Label(filter.displayName, systemImage: filter.systemImage)
+                                    .tag(filter)
                             }
                         }
                         if sharedAppSortManager.appSortType == .custom {

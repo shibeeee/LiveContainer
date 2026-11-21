@@ -130,6 +130,9 @@ struct MultitaskAppWindow: View {
     @Environment(\.openWindow) var openWindow
     @AppStorage("LCMultitaskMode", store: LCUtils.appGroupUserDefault) var multitaskMode: MultitaskMode = .virtualWindow
     @AppStorage("LCSkipTerminatedScreen", store: LCUtils.appGroupUserDefault) var skipTerminatedScreen = false
+    @AppStorage("LCRestartTerminatedApp", store: LCUtils.appGroupUserDefault) var restartTerminatedApp = false
+    @State private var sceneDisconnected = false
+    @State private var launchedAt = Date()
     let pub = NotificationCenter.default.publisher(for: UIScene.didDisconnectNotification)
     init(id: String) {
         guard let appInfo = MultitaskWindowManager.appDict[id] else {
@@ -161,15 +164,26 @@ struct MultitaskAppWindow: View {
             .navigationTitle(Text("\(appInfo.displayName) - \(String(pid))"))
             .onReceive(pub) { out in
                 if let scene1 = sceneDelegate.window?.windowScene, let scene2 = out.object as? UIWindowScene, scene1 == scene2 {
+                    sceneDisconnected = true
                     show = false
                 }
             }
             
-        } else if skipTerminatedScreen && isVirtualWindowMode, appInfo != nil {
+        } else if skipTerminatedScreen, appInfo != nil {
             Color.clear
                 .ignoresSafeArea(.all, edges: .all)
                 .onAppear {
                     guard !didRequestManualClose else { return }
+                    if !isVirtualWindowMode {
+                        // native window: restart in this window, unless it is closing or the app keeps crashing right after launch
+                        guard !sceneDisconnected else { return }
+                        if restartTerminatedApp && Date().timeIntervalSince(launchedAt) > 2 {
+                            restartInPlace()
+                        } else {
+                            requestSceneDestruction(isManual: false)
+                        }
+                        return
+                    }
                     if let appInfo {
                         MultitaskRelaunchManager.scheduleRelaunchIfNeeded(bundleId: appInfo.bundleId, dataUUID: appInfo.dataUUID, isManualTermination: false)
                     }
@@ -192,6 +206,12 @@ struct MultitaskAppWindow: View {
                         requestSceneDestruction(isManual: true)
                     }
                     .buttonStyle(.bordered)
+                }
+                if appInfo != nil {
+                    Button("lc.multitaskAppWindow.restart".loc) {
+                        restartInPlace()
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
                 Button("lc.common.close".loc) {
                     requestSceneDestruction(isManual: true)
@@ -217,6 +237,13 @@ struct MultitaskAppWindow: View {
                 }
             }
         }
+    }
+    
+    private func restartInPlace() {
+        errorMessage = nil
+        pid = 0
+        launchedAt = Date()
+        show = true
     }
     
     private func requestSceneDestruction(isManual: Bool = false) {

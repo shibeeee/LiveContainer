@@ -47,14 +47,6 @@ struct LCMultitaskSettingView: View {
                     Toggle(isOn: $autoEndPiP) {
                         Text("lc.settings.autoEndPiP".loc)
                     }
-                    Toggle(isOn: $skipTerminatedScreen) {
-                        Text("lc.settings.skipTerminatedScreen".loc)
-                    }
-                    if skipTerminatedScreen {
-                        Toggle(isOn: $restartTerminatedApp) {
-                            Text("lc.settings.restartTerminatedApp".loc)
-                        }
-                    }
                     Toggle(isOn: $bottomWindowBar) {
                         Text("lc.settings.bottomWindowBar".loc)
                     }
@@ -62,6 +54,14 @@ struct LCMultitaskSettingView: View {
                         Text("lc.settings.redirectURLToHost".loc)
                     }
 
+                }
+                Toggle(isOn: $skipTerminatedScreen) {
+                    Text("lc.settings.skipTerminatedScreen".loc)
+                }
+                if skipTerminatedScreen {
+                    Toggle(isOn: $restartTerminatedApp) {
+                        Text("lc.settings.restartTerminatedApp".loc)
+                    }
                 }
             }
             

@@ -9,6 +9,52 @@ import Foundation
 import SwiftUI
 import Combine
 
+enum AppListFilter: String, CaseIterable {
+    case all = "all"
+    case shared = "shared"
+    case privateApps = "private"
+    case jit = "jit"
+    
+    var displayName: String {
+        switch self {
+        case .all:
+            return "lc.appList.filter.all".loc
+        case .shared:
+            return "lc.appList.filter.shared".loc
+        case .privateApps:
+            return "lc.appList.filter.private".loc
+        case .jit:
+            return "lc.appList.filter.jit".loc
+        }
+    }
+    
+    var systemImage: String {
+        switch self {
+        case .all:
+            return "square.grid.2x2"
+        case .shared:
+            return "person.2"
+        case .privateApps:
+            return "lock"
+        case .jit:
+            return "bolt"
+        }
+    }
+    
+    func matches(_ app: LCAppModel) -> Bool {
+        switch self {
+        case .all:
+            return true
+        case .shared:
+            return app.uiIsShared
+        case .privateApps:
+            return !app.uiIsShared
+        case .jit:
+            return app.uiIsJITNeeded
+        }
+    }
+}
+
 enum AppSortType: String, CaseIterable {
     case defaultOrder = "default"
     case alphabetical = "alphabetical"

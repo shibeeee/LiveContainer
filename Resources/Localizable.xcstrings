@@ -2636,6 +2636,56 @@
         }
       }
     },
+    "lc.appList.filter.all" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All Apps"
+          }
+        }
+      }
+    },
+    "lc.appList.filter.jit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "JIT Apps"
+          }
+        }
+      }
+    },
+    "lc.appList.filter.private" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Private Apps"
+          }
+        }
+      }
+    },
+    "lc.appList.filter.shared" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shared Apps"
+          }
+        }
+      }
+    },
+    "lc.appList.filter.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show"
+          }
+        }
+      }
+    },
     "lc.appList.generatedIconStyleSelector.dark" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -18797,6 +18847,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此應用程式已被停止。"
+          }
+        }
+      }
+    },
+    "lc.multitaskAppWindow.restart" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restart App"
           }
         }
       }
