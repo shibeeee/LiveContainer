@@ -1,0 +1,18 @@
+diff --git a/Sources/DeveloperPortal/Authentication.swift b/Sources/DeveloperPortal/Authentication.swift
+index 0b8e0f2..e78e143 100644
+--- a/Sources/DeveloperPortal/Authentication.swift
++++ b/Sources/DeveloperPortal/Authentication.swift
+@@ -349,6 +349,13 @@ public extension DeveloperPortal {
+         guard let responseDictionary = parsePlistOrJSON(data) else {
+             let rawStr = String(data: data, encoding: .utf8) ?? data.hexEncodedString()
+             debugLog("[SideSign] Auth endpoint returned invalid response format: \(rawStr)")
++            // Apple's edge answers with a short HTML page when it rejects a sign-in outright
++            if statusCode == 429 || statusCode >= 500 {
++                throw ServerError.underlyingError(
++                    code: statusCode,
++                    message: "Apple's sign-in server rejected the request. Wait a few minutes, then try again. If it keeps happening, reset adi.pb in Settings and pick another anisette server"
++                )
++            }
+             throw ServerError.invalidResponseFormat(rawPayload: rawStr)
+         }
+ 

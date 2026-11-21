@@ -1,0 +1,254 @@
+From 9d89dac1d391c934e5c69be1fadbb090d9a7f944 Mon Sep 17 00:00:00 2001
+From: playportdev <dev@playport.dev>
+Date: Mon, 5 Oct 2026 21:50:05 +0200
+Subject: [PATCH] Enable Increased Memory Limit for free teams
+
+Apple offers the Increased Memory Limit capability to free teams, but the
+legacy updateAppId.action request cannot enable it, and Feature.freeFeatures
+did not list it, so SideStore dropped it and the profile came back without
+com.apple.developer.kernel.increased-memory-limit (SideStore#1616).
+
+- Feature.capabilityID names the developer services v1 capability ID of a
+  feature the legacy request cannot enable (INCREASED_MEMORY_LIMIT).
+- updateAppID leaves such features out of the legacy request and, after it,
+  enables them with a PATCH to v1/bundleIds/<id> (bundleIdCapabilities), the
+  request Xcode, AltSign (b2c8861) and GetMoreRam send. If Apple refuses it,
+  the update still succeeds without the capability, as before.
+- freeFeatures lists increasedMemoryLimit.
+- sendServicesBodyRequest sends a v1 request with its own method and JSON
+  body; the header set is shared with sendServicesRequest.
+
+Tests mock both requests: the legacy body carries no modern feature, the
+PATCH body names the capability, no PATCH without it, and a refused PATCH
+does not fail the update.
+---
+ Sources/DeveloperPortal/AppIDs.swift          |  56 ++++++++++
+ .../DeveloperPortal/DeveloperPortalAPI.swift  | 100 +++++++++++++-----
+ Sources/Models/Feature.swift                  |  15 ++-
+ 3 files changed, 143 insertions(+), 28 deletions(-)
+
+diff --git a/Sources/DeveloperPortal/AppIDs.swift b/Sources/DeveloperPortal/AppIDs.swift
+index efb5c44..2dfdeb9 100644
+--- a/Sources/DeveloperPortal/AppIDs.swift
++++ b/Sources/DeveloperPortal/AppIDs.swift
+@@ -73,7 +73,15 @@ public extension DeveloperPortal {
+             "appIdId": appID.identifier
+         ]
+ 
++        var capabilityIDs: [String] = []
+         for (feature, value) in appID.features {
++            if let capabilityID = feature.capabilityID {
++                // Not a legacy feature: enabled below with a v1 request.
++                if value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "true" {
++                    capabilityIDs.append(capabilityID)
++                }
++                continue
++            }
+             let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+             if trimmed.lowercased() == "true" {
+                 parameters[feature.rawValue] = true
+@@ -93,9 +101,57 @@ public extension DeveloperPortal {
+ 
+         debugLog("[SideSign] updateAppID succeeded")
+         verboseLog("[SideSign] Updated: \(updatedAppID.name) (\(updatedAppID.bundleIdentifier))")
++
++        if !capabilityIDs.isEmpty {
++            // A failure here leaves the App ID as the legacy request left it,
++            // so the app still installs, without these capabilities.
++            do {
++                try await enableCapabilities(capabilityIDs.sorted(), for: updatedAppID, team: team, session: session)
++            } catch {
++                debugLog("[SideSign] updateAppID: could not enable \(capabilityIDs.sorted()): \(error.localizedDescription); continuing without them")
++            }
++        }
+         return updatedAppID
+     }
+ 
++    /// Enables capabilities that only the developer services v1 API can enable
++    /// (Increased Memory Limit). This is the request Xcode sends, and the one
++    /// AltSign and GetMoreRam send; Apple accepts it for free teams too.
++    func enableCapabilities(_ capabilityIDs: [String], for appID: AppID, team: Team, session: Session) async throws {
++        debugLog("[SideSign] enableCapabilities starting...")
++        verboseLog("[SideSign] AppID: \(appID.bundleIdentifier), capabilities: \(capabilityIDs)")
++
++        let capabilities: [[String: Any]] = capabilityIDs.map { capabilityID in
++            [
++                "type": "bundleIdCapabilities",
++                "attributes": ["enabled": true, "settings": [Any]()],
++                "relationships": ["capability": ["data": ["id": capabilityID, "type": "capabilities"]]]
++            ]
++        }
++        let body: [String: Any] = [
++            "data": [
++                "id": appID.identifier,
++                "type": "bundleIds",
++                "attributes": [
++                    "name": appID.name,
++                    "identifier": appID.bundleIdentifier,
++                    "teamId": team.identifier,
++                    "seedId": team.identifier,
++                    "bundleType": "bundle",
++                    "hasExclusiveManagedCapabilities": false
++                ],
++                "relationships": ["bundleIdCapabilities": ["data": capabilities]]
++            ]
++        ]
++
++        var request = URLRequest(url: URL(string: "bundleIds/\(appID.identifier)", relativeTo: servicesBaseURL)!)
++        request.httpMethod = "PATCH"
++        request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [.sortedKeys])
++
++        let _: EmptyResponse = try await sendServicesBodyRequest(request, session: session)
++        debugLog("[SideSign] enableCapabilities succeeded")
++    }
++
+     func deleteAppID(_ appID: AppID, for team: Team, session: Session) async throws -> Bool {
+         debugLog("[SideSign] deleteAppID starting...")
+         verboseLog("[SideSign] AppID: \(appID.name) (\(appID.bundleIdentifier)), Team: \(team.name)")
+diff --git a/Sources/DeveloperPortal/DeveloperPortalAPI.swift b/Sources/DeveloperPortal/DeveloperPortalAPI.swift
+index dfea7cc..e3302db 100644
+--- a/Sources/DeveloperPortal/DeveloperPortalAPI.swift
++++ b/Sources/DeveloperPortal/DeveloperPortalAPI.swift
+@@ -419,33 +419,7 @@ public final class DeveloperPortal: DeveloperPortalAPI, Sendable {
+         request.httpBody = bodyData
+         request.setValue(methodOverride, forHTTPHeaderField: "X-HTTP-Method-Override")
+ 
+-        let h = customHeaders
+-        var headers: [String: String] = [
+-            "Content-Type": "application/vnd.api+json",
+-            "User-Agent": h.developerServices.userAgent,
+-            "Accept": "application/vnd.api+json",
+-            "Accept-Language": "en-us",
+-            "X-Apple-App-Info": h.grandSlam.authApp,
+-            "X-Xcode-Version": apiSession.xcodeVersion,
+-            "X-Apple-I-Identity-Id": apiSession.dsid,
+-            "X-Apple-GS-Token": apiSession.authToken
+-        ]
+-
+-        if includeAnisette {
+-            let a = apiSession.anisetteData
+-            headers["X-Apple-I-MD-M"] = a.machineID
+-            headers["X-Apple-I-MD"] = a.oneTimePassword
+-            headers["X-Apple-I-MD-LU"] = a.localUserID
+-            headers["X-Apple-I-MD-RINFO"] = a.routingInfo
+-            headers["X-Mme-Device-Id"] = a.deviceID
+-            headers["X-MMe-Client-Info"] = a.clientInfo
+-            headers["X-Apple-I-Client-Time"] = a.clientTime
+-            headers["X-Apple-Locale"] = a.locale
+-            headers["X-Apple-I-Locale"] = a.locale
+-            headers["X-Apple-I-TimeZone"] = a.timeZone
+-        }
+-
+-        headers.forEach { request.setValue($1, forHTTPHeaderField: $0) }
++        servicesHeaders(for: apiSession, includeAnisette: includeAnisette).forEach { request.setValue($1, forHTTPHeaderField: $0) }
+ 
+         verboseLog("[SideSign] sendServicesRequest to: \(request.url?.absoluteString ?? "unknown URL")")
+         verboseLog("[SideSign] sendServicesRequest parameters: \(additionalParameters ?? [:])")
+@@ -508,4 +482,76 @@ public final class DeveloperPortal: DeveloperPortalAPI, Sendable {
+             throw ServerError.invalidResponseFormat(rawPayload: rawStr)
+         }
+     }
++
++    func servicesHeaders(for apiSession: Session, includeAnisette: Bool) -> [String: String] {
++        let h = customHeaders
++        var headers: [String: String] = [
++            "Content-Type": "application/vnd.api+json",
++            "User-Agent": h.developerServices.userAgent,
++            "Accept": "application/vnd.api+json",
++            "Accept-Language": "en-us",
++            "X-Apple-App-Info": h.grandSlam.authApp,
++            "X-Xcode-Version": apiSession.xcodeVersion,
++            "X-Apple-I-Identity-Id": apiSession.dsid,
++            "X-Apple-GS-Token": apiSession.authToken
++        ]
++
++        if includeAnisette {
++            let a = apiSession.anisetteData
++            headers["X-Apple-I-MD-M"] = a.machineID
++            headers["X-Apple-I-MD"] = a.oneTimePassword
++            headers["X-Apple-I-MD-LU"] = a.localUserID
++            headers["X-Apple-I-MD-RINFO"] = a.routingInfo
++            headers["X-Mme-Device-Id"] = a.deviceID
++            headers["X-MMe-Client-Info"] = a.clientInfo
++            headers["X-Apple-I-Client-Time"] = a.clientTime
++            headers["X-Apple-Locale"] = a.locale
++            headers["X-Apple-I-Locale"] = a.locale
++            headers["X-Apple-I-TimeZone"] = a.timeZone
++        }
++        return headers
++    }
++
++    // JSON:API Request Dispatcher: sends the request's own method and JSON body
++    // (a PATCH, say), where sendServicesRequest tunnels a query through POST.
++    func sendServicesBodyRequest<T: Decodable>(_ originalRequest: URLRequest, session apiSession: Session) async throws -> T {
++        var request = originalRequest
++        servicesHeaders(for: apiSession, includeAnisette: true).forEach { request.setValue($1, forHTTPHeaderField: $0) }
++
++        verboseLog("[SideSign] sendServicesBodyRequest \(request.httpMethod ?? "GET") to: \(request.url?.absoluteString ?? "unknown URL")")
++
++        let (data, response): (Data, URLResponse)
++        do {
++            (data, response) = try await session.data(for: request)
++        } catch {
++            debugLog("[SideSign] sendServicesBodyRequest network error: \(error)")
++            throw error
++        }
++
++        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
++        if let payloadString = formatPayload(data) {
++            verboseLog("[SideSign] sendServicesBodyRequest response (HTTP \(statusCode)): \(payloadString)")
++        }
++
++        if let status = try? JSONDecoder().decode(DeveloperPortalStatusResponse.self, from: data),
++           let firstError = status.errors?.first {
++            let message = firstError.detail ?? firstError.title ?? "Apple Developer Services Error"
++            debugLog("[SideSign] sendServicesBodyRequest error (HTTP \(statusCode)): \(message)")
++            throw ServerError.underlyingError(code: Int(firstError.status ?? "") ?? statusCode, message: message)
++        }
++        guard (200..<300).contains(statusCode) else {
++            throw ServerError.underlyingError(code: statusCode, message: "Apple Developer Services returned HTTP \(statusCode)")
++        }
++
++        if data.isEmpty, let empty = EmptyResponse() as? T {
++            return empty
++        }
++        do {
++            return try JSONDecoder().decode(T.self, from: data)
++        } catch {
++            let rawStr = String(data: data, encoding: .utf8) ?? data.hexEncodedString()
++            debugLog("[SideSign] sendServicesBodyRequest failed to decode \(T.self): \(error). Raw payload: \(rawStr)")
++            throw ServerError.invalidResponseFormat(rawPayload: rawStr)
++        }
++    }
+ }
+diff --git a/Sources/Models/Feature.swift b/Sources/Models/Feature.swift
+index 554fc75..716a933 100644
+--- a/Sources/Models/Feature.swift
++++ b/Sources/Models/Feature.swift
+@@ -75,9 +75,22 @@ public extension Feature {
+     static let extendedVirtualAddressing: Feature       = "extendedVirtualAddressing"
+     static let increasedDebuggingMemoryLimit: Feature   = "increasedDebuggingMemoryLimit"
+ 
++    /// The capability ID the developer services v1 `bundleIdCapabilities`
++    /// endpoint uses for a feature the legacy `updateAppId.action` request
++    /// cannot enable, or nil for a legacy feature.
++    var capabilityID: String? {
++        switch self {
++        case .increasedMemoryLimit: return "INCREASED_MEMORY_LIMIT"
++        default:                    return nil
++        }
++    }
++
+     static let freeFeatures: Set<Feature> = [
+         .appGroups,
+-        .interAppAudio
++        .interAppAudio,
++        // Apple offers this capability to free teams; it is enabled through
++        // the v1 bundleIdCapabilities request (see `capabilityID`).
++        .increasedMemoryLimit
+     ]
+ 
+     static let paidFeatures: Set<Feature> = [
+-- 
+2.43.0
+

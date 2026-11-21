@@ -21,6 +21,12 @@ for patch in "$ROOT"/SideStorePatches/*.patch; do
     echo "Applying $(basename "$patch")"
     git apply --3way --whitespace=nowarn "$patch"
 done
+# patches for SideSign, the signing library SideStore builds from its Dependencies/SideSign submodule
+for patch in "$ROOT"/SideStorePatches/SideSign/*.patch; do
+    [ -e "$patch" ] || continue
+    echo "Applying SideSign/$(basename "$patch")"
+    git -C Dependencies/SideSign apply --3way --whitespace=nowarn "$patch"
+done
 
 # Same binary artifacts SideStore's own CI pre-fetches for Swift Package Manager.
 ART="$HOME/Library/Caches/org.swift.swiftpm/artifacts"

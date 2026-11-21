@@ -189,7 +189,7 @@ static void SSInstallVersionWindow(UIWindowScene *windowScene)
     char iosBuild[32];
     sysctlbyname("kern.osversion", iosBuild, &size, NULL, 0);
     bool isPhone = UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPhone;
-    NSString* allVersionString = [NSString stringWithFormat:isPhone ? @"LC %@, SS %@\niOS %@ (%s)" : @"LC %@, SS %@, iOS %@ (%s)", LCVersion, SSVersion, osVersion, iosBuild];
+    NSString* allVersionString = [NSString stringWithFormat:isPhone ? @"LC %@, SS %@\niOS %@ (%s), sign-in fix on" : @"LC %@, SS %@, iOS %@ (%s), sign-in fix on", LCVersion, SSVersion, osVersion, iosBuild];
 
     UILabel* versionLabel = [UILabel new];
     versionLabel.translatesAutoresizingMaskIntoConstraints = NO;
