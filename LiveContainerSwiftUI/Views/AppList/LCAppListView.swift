@@ -123,6 +123,29 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
         _installOptions = State(initialValue: [])
     }
     
+    // When LiveContainer's own signing profile expires (7 days after a refresh for free accounts).
+    // nil when there's no embedded profile, for example on TrollStore.
+    static let profileExpirationDate: Date? = {
+        guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
+              let data = try? Data(contentsOf: url),
+              let start = data.range(of: Data("<?xml".utf8)),
+              let end = data.range(of: Data("</plist>".utf8), in: start.lowerBound..<data.endIndex),
+              let plist = try? PropertyListSerialization.propertyList(from: data.subdata(in: start.lowerBound..<end.upperBound), format: nil) as? [String: Any] else {
+            return nil
+        }
+        return plist["ExpirationDate"] as? Date
+    }()
+    
+    static func expiryText(for expiry: Date) -> String {
+        let calendar = Calendar.current
+        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: Date()), to: calendar.startOfDay(for: expiry)).day ?? 0
+        switch days {
+        case ...0: return "lc.appList.expiresToday".loc
+        case 1: return "lc.appList.expiresTomorrow".loc
+        default: return String(format: "lc.appList.expiresInDays %lld".loc, days)
+        }
+    }
+    
     var body: some View {
         NavigationView {
             ScrollView {
@@ -133,6 +156,31 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                         EmptyView()
                 })
                 .hidden()
+                
+                if let expiry = Self.profileExpirationDate, expiry.timeIntervalSinceNow < 3 * 24 * 3600 {
+                    HStack(spacing: 12) {
+                        Image(systemName: "clock.badge.exclamationmark")
+                            .font(.title2)
+                            .foregroundStyle(.orange)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(Self.expiryText(for: expiry))
+                                .font(.subheadline.bold())
+                            Text("lc.appList.expiryDesc".loc)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 0)
+                        if UserDefaults.sideStoreExist() {
+                            Button("lc.appList.refreshNow".loc) {
+                                LCUtils.openSideStore()
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                    }
+                    .padding()
+                    .background(RoundedRectangle(cornerRadius: 16).fill(Color.orange.opacity(0.12)))
+                    .padding([.horizontal, .top])
+                }
                 
                 LazyVStack {
                     ForEach(filteredApps, id: \.self) { app in

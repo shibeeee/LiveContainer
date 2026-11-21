@@ -2646,6 +2646,46 @@
         }
       }
     },
+    "lc.appList.expiresInDays %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LiveContainer expires in %lld days"
+          }
+        }
+      }
+    },
+    "lc.appList.expiresToday" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LiveContainer expires today"
+          }
+        }
+      }
+    },
+    "lc.appList.expiresTomorrow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LiveContainer expires tomorrow"
+          }
+        }
+      }
+    },
+    "lc.appList.expiryDesc" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refresh it in SideStore before then, or it won't open."
+          }
+        }
+      }
+    },
     "lc.appList.filter.all" : {
       "localizations" : {
         "en" : {
@@ -4687,6 +4727,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "無法解析plist檔案"
+          }
+        }
+      }
+    },
+    "lc.appList.refreshNow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refresh"
           }
         }
       }

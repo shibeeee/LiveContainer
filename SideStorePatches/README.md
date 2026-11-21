@@ -14,6 +14,7 @@ Patches apply in name order with `git apply --3way`.
 
 | Patch | What it does |
 |---|---|
+| `001-refresh-all-apps-never-hangs.patch` | The Refresh All Apps action could hang forever when SideStore failed to start the refresh (`try?` dropped the error and never finished). It now reports the error. Inside LiveContainer's background process it also waits for the refresh to finish instead of asking to continue in the foreground after 27 seconds, which failed the shortcut there. |
 | `SideSign/001-clear-sign-in-rejection-error.patch` | When Apple's sign-in server answers with an HTML error page (HTTP 429 or 5xx), show what to do instead of "Invalid server response: unparseable format". |
 | `SideSign/002-increased-memory-limit-for-free-teams.patch` | Enable the Increased Memory Limit capability for free accounts ([SideStore#1616](https://github.com/SideStore/SideStore/issues/1616)). From SideStore/SideSign pull request 4 by playportdev. |
 

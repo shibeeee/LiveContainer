@@ -47,6 +47,37 @@ https://github.com/shibeeee/LiveContainer/releases/download/nightly/apps_fork.js
 - LiveContainer's Settings shows **Update Available** when a newer nightly is out; tap it to open
   SideStore and install it from My Apps.
 - To roll back, install an older `build-<version>` release with iloader.
+- When LiveContainer is within 3 days of expiring, the Apps tab shows a banner with a **Refresh** button.
+
+## Automatic refresh
+
+Free Apple Accounts sign apps for 7 days, and an expired LiveContainer won't open. A Shortcuts automation
+can refresh everything for you:
+
+1. Keep LocalDevVPN connected. SideStore needs it to reach your device when it refreshes.
+2. Open **Shortcuts → Automation → New Automation**.
+3. Pick **Time of Day**, choose a daily time when you're usually using your phone, and select **Run
+   Immediately**.
+4. Add the **Refresh All Apps** action from **LiveContainer**, and save.
+5. For a backup, add a second automation with **App → Is Opened** for an app you open every day, running
+   the same action.
+
+Things iOS doesn't allow, so they can't be fixed in code:
+- **The phone must have been unlocked recently.** While it's locked, iOS refuses the connection SideStore
+  needs and the refresh fails with "The device has not been unlocked recently"
+  ([SideStore#1723](https://github.com/SideStore/SideStore/issues/1723)). That's why the steps above use
+  times and apps you're actively using.
+- **"Action not found" (LNPerformActionErrorCodeActionNotFound)** after updating LiveContainer means
+  Shortcuts still points at the old app's action. Delete the Refresh All Apps action from the automation and
+  add it again.
+
+What this fork fixes in automatic refresh:
+- A refresh that SideStore couldn't start used to hang forever, so every later automation failed with
+  "Another refresh task is in progress" until LiveContainer was force-quit. It now fails with the real error,
+  and LiveContainer gives up on any refresh after 15 minutes.
+- In the background, the shortcut no longer fails after 27 seconds while the refresh is still running.
+- The background SideStore is shut down a minute after a refresh, so LiveContainer doesn't keep running in
+  the background afterwards ([LiveContainer#1702](https://github.com/LiveContainer/LiveContainer/issues/1702)).
 
 ## What's different from the official build
 
@@ -93,6 +124,8 @@ https://github.com/shibeeee/LiveContainer/releases/download/nightly/apps_fork.js
 | Feature | Where |
 |---|---|
 | Repair SideStore Sign-In, update check, Copy Diagnostics | LiveContainer → Settings |
+| Expiry banner with Refresh | Top of the Apps tab, from 3 days before LiveContainer expires |
+| Refresh All Apps (for automations) | Shortcuts app → LiveContainer |
 | Show filter | Apps tab → sort menu (top right) → Show |
 | Back Up Data Folder | Long-press an app in the Apps tab |
 | Restart App | The "This app has been terminated" screen of a native multitask window |

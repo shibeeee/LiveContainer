@@ -75,6 +75,8 @@ class RefreshHandler: NSObject, RefreshServer {
     var sideStorePid: Int32 = 0
     var client: RefreshClient? = nil
     var ext: NSExtension? = nil
+    // counts refreshes, so a timeout or idle shutdown scheduled for an earlier one does nothing
+    var refreshGeneration = 0
     
     static var shared = RefreshHandler()
     
@@ -154,10 +156,39 @@ class RefreshHandler: NSObject, RefreshServer {
         }
         self.client?.refreshAllApps(withIdentifier: identifier, mangledTypeName: mangledName)
         
+        refreshGeneration += 1
+        let generation = refreshGeneration
         try await withUnsafeThrowingContinuation { c in
             self.c = c
+            // never leave a refresh pending forever: it would block every later one with
+            // "Another refresh task is in progress" until LiveContainer is killed
+            DispatchQueue.main.asyncAfter(deadline: .now() + 15 * 60) {
+                guard generation == self.refreshGeneration, let c = self.c else { return }
+                self.c = nil
+                c.resume(throwing: NSError(domain: "SideStore", code: 1, userInfo: [NSLocalizedDescriptionKey: "Built-in SideStore didn't finish refreshing within 15 minutes"]))
+                self.stopSideStore()
+            }
         }
         
+    }
+    
+    // Ends the background SideStore a minute after a refresh, unless another one started,
+    // so LiveContainer doesn't stay running in the background afterwards.
+    func scheduleIdleShutdown() {
+        DispatchQueue.main.async {
+            let generation = self.refreshGeneration
+            DispatchQueue.main.asyncAfter(deadline: .now() + 60) {
+                guard generation == self.refreshGeneration, self.c == nil, self.launchContinuation == nil else { return }
+                self.stopSideStore()
+            }
+        }
+    }
+    
+    func stopSideStore() {
+        ext?._kill(9)
+        ext = nil
+        client = nil
+        sideStorePid = 0
     }
     
     func updateProgress(_ value: Double) {
@@ -172,6 +203,7 @@ class RefreshHandler: NSObject, RefreshServer {
             c?.resume()
             c = nil
         }
+        scheduleIdleShutdown()
     }
     
     func onConnection(_ connection: NSXPCConnection!) {
