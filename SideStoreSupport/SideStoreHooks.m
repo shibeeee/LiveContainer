@@ -8,6 +8,8 @@
 #include "../LiveContainer/LCSharedUtils.h"
 #include "XPCServer.h"
 #import <sys/sysctl.h>
+#import <objc/message.h>
+#import <Security/Security.h>
 @import UserNotifications;
 @import UIKit;
 
@@ -232,6 +234,27 @@ static void SSInstallVersionWindow(UIWindowScene *windowScene)
 }
 
 
+// Repair Sign-In (LiveContainer Settings sets LCRepairSideStoreSignIn): remove SideStore's saved
+// Apple ID tokens and anisette data (adi.pb), the same keychain items SideStore's own sign-out clears
+// when "keep anisette data" is off. The signing certificate and installed apps are left alone.
+static void LCRepairSideStoreSignInIfRequested(void) {
+    NSUserDefaults* shared = NSUserDefaults.lcSharedDefaults;
+    if (![shared boolForKey:@"LCRepairSideStoreSignIn"]) return;
+    [shared removeObjectForKey:@"LCRepairSideStoreSignIn"];
+
+    // SideStore's keychain service is +[NSBundle appbundleIdentifier], hooked above to LiveContainer's
+    NSString* service = ((NSString* (*)(id, SEL))objc_msgSend)(NSBundle.class, @selector(appbundleIdentifier));
+    for (NSString* account in @[@"adiPb", @"appleIDEmailAddress", @"appleIDPassword", @"appleIDAdsid", @"appleIDXcodeToken"]) {
+        NSDictionary* query = @{
+            (__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
+            (__bridge id)kSecAttrService: service,
+            (__bridge id)kSecAttrAccount: account,
+        };
+        OSStatus status = SecItemDelete((__bridge CFDictionaryRef)query);
+        NSLog(@"[LC] Repair Sign-In: %@ -> %d", account, (int)status);
+    }
+}
+
 void installSideStoreHooks(void) {
 
     swizzleClassMethod(NSBundle.class, @selector(appbundleIdentifier), @selector(hook_appbundleIdentifier));
@@ -250,6 +273,8 @@ void installSideStoreHooks(void) {
     method_setImplementation(altStoreSourceURLMethod, (IMP)SideStoreSource_hook_altStoreSourceURL);
     
     if (!NSUserDefaults.isLiveProcess) {
+        LCRepairSideStoreSignInIfRequested();
+        
         // add escape button
         Method viewDidLoadMethod = class_getInstanceMethod(PrivClass(MyAppsViewController), @selector(viewDidLoad));
         SideStoreMyAppsViewController_orig_viewDidload = (void (*)(UICollectionViewController *, SEL))method_getImplementation(viewDidLoadMethod);

@@ -27220,6 +27220,46 @@
         }
       }
     },
+    "lc.settings.repairSignIn" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repair SideStore Sign-In"
+          }
+        }
+      }
+    },
+    "lc.settings.repairSignInAction" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset and Open SideStore"
+          }
+        }
+      }
+    },
+    "lc.settings.repairSignInConfirm" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This signs the built-in SideStore out and clears its anisette data (adi.pb). Your apps and signing certificate are kept. SideStore opens next; sign in again there."
+          }
+        }
+      }
+    },
+    "lc.settings.repairSignInDesc" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use this when SideStore can't sign in (for example error 503 or -45061) even after waiting."
+          }
+        }
+      }
+    },
     "lc.settings.restartTerminatedApp" : {
       "extractionState" : "stale",
       "localizations" : {

@@ -39,6 +39,7 @@ struct LCSettingsView: View {
     @State var successInfo = ""
     @State private var diagnosticsCopied = false
     @State private var latestNightlyVersion: String? = nil
+    @State private var repairSignInConfirmShow = false
 
     @State private var certificateDataFound = false
     
@@ -301,6 +302,28 @@ struct LCSettingsView: View {
                         if Self.isVersion(latest, newerThan: Self.currentVersion) {
                             Text("lc.settings.updateDesc".loc)
                         }
+                    }
+                }
+                
+                if UserDefaults.sideStoreExist() {
+                    Section {
+                        Button {
+                            repairSignInConfirmShow = true
+                        } label: {
+                            Label("lc.settings.repairSignIn".loc, systemImage: "person.badge.key")
+                        }
+                    } footer: {
+                        Text("lc.settings.repairSignInDesc".loc)
+                    }
+                    .alert("lc.settings.repairSignIn".loc, isPresented: $repairSignInConfirmShow) {
+                        Button("lc.settings.repairSignInAction".loc, role: .destructive) {
+                            // the reset runs inside SideStore the next time it opens (SideStoreHooks.m)
+                            LCUtils.appGroupUserDefault.set(true, forKey: "LCRepairSideStoreSignIn")
+                            LCUtils.openSideStore()
+                        }
+                        Button("lc.common.cancel".loc, role: .cancel) { }
+                    } message: {
+                        Text("lc.settings.repairSignInConfirm".loc)
                     }
                 }
                 
