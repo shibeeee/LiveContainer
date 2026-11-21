@@ -38,6 +38,7 @@ struct LCSettingsView: View {
     @State var successShow = false
     @State var successInfo = ""
     @State private var diagnosticsCopied = false
+    @State private var latestNightlyVersion: String? = nil
 
     @State private var certificateDataFound = false
     
@@ -284,6 +285,25 @@ struct LCSettingsView: View {
                     }
                 }
                 
+                if UserDefaults.sideStoreExist(), let latest = latestNightlyVersion {
+                    Section {
+                        if Self.isVersion(latest, newerThan: Self.currentVersion) {
+                            Button {
+                                LCUtils.openSideStore()
+                            } label: {
+                                Label(String(format: "lc.settings.updateAvailable %@".loc, latest), systemImage: "arrow.down.circle")
+                            }
+                        } else {
+                            Label("lc.settings.upToDate".loc, systemImage: "checkmark.circle")
+                                .foregroundStyle(.secondary)
+                        }
+                    } footer: {
+                        if Self.isVersion(latest, newerThan: Self.currentVersion) {
+                            Text("lc.settings.updateDesc".loc)
+                        }
+                    }
+                }
+                
                 Section {
                     Button {
                         UIPasteboard.general.string = Self.diagnosticsText()
@@ -297,6 +317,11 @@ struct LCSettingsView: View {
                     }
                 } footer: {
                     Text("lc.settings.copyDiagnosticsDesc".loc)
+                }
+                .task {
+                    if latestNightlyVersion == nil {
+                        latestNightlyVersion = await Self.fetchLatestNightlyVersion()
+                    }
                 }
                 
                 Section {
@@ -732,6 +757,32 @@ struct LCSettingsView: View {
 }
 
 extension LCSettingsView {
+    static var currentVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
+    }
+    
+    static func isVersion(_ version: String, newerThan other: String) -> Bool {
+        version.compare(other, options: .numeric) == .orderedDescending
+    }
+    
+    // Reads the newest version from the update source fork builds point built-in SideStore at.
+    // Returns nil for builds without one, or when the source can't be reached.
+    static func fetchLatestNightlyVersion() async -> String? {
+        guard let source = Bundle.main.object(forInfoDictionaryKey: "LCUpdateSourceURL") as? String,
+              let url = URL(string: source) else {
+            return nil
+        }
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
+        request.httpMethod = "GET"
+        guard let (data, _) = try? await URLSession.shared.data(for: request),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let apps = json["apps"] as? [[String: Any]],
+              let version = apps.first?["version"] as? String else {
+            return nil
+        }
+        return version
+    }
+    
     // Versions and setup details for bug reports. Contains no account or personal data.
     static func diagnosticsText() -> String {
         var systemInfo = utsname()

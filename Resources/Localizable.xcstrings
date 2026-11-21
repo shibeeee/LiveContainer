@@ -28323,6 +28323,36 @@
         }
       }
     },
+    "lc.settings.upToDate" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LiveContainer Is Up to Date"
+          }
+        }
+      }
+    },
+    "lc.settings.updateAvailable %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Update Available: %@"
+          }
+        }
+      }
+    },
+    "lc.settings.updateDesc" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens the built-in SideStore. Install the update from My Apps."
+          }
+        }
+      }
+    },
     "lc.settings.warning" : {
       "extractionState" : "manual",
       "localizations" : {
