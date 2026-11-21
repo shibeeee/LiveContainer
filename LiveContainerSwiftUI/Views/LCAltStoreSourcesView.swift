@@ -1034,8 +1034,8 @@ private struct LCSourceAppBanner: View {
                 installAction(app)
             } label: {
                 Text("lc.common.install".loc)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(dynamicColors ? textColor : Color("FontColor"))
+                    .bold()
+                    .foregroundColor(.white)
                     .lineLimit(1)
                     .frame(height: 32)
                     .minimumScaleFactor(0.1)
@@ -1046,14 +1046,14 @@ private struct LCSourceAppBanner: View {
             .frame(height: 32)
             .fixedSize()
             .background(
-                Capsule().fill((dynamicColors ? primaryColor : Color("FontColor")).opacity(0.18))
+                Capsule().fill(dynamicColors ? primaryColor : Color("FontColor"))
             )
             .clipShape(Capsule())
         }
         .padding()
         .frame(height: 88)
         .background {
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
+            RoundedRectangle(cornerSize: CGSize(width: 22, height: 22))
                 .fill(backgroundColor)
         }
     }

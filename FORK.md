@@ -37,8 +37,7 @@ newest nightly as an update.
 - **Multitask fixes:** terminated native windows can restart (and honour "Skip terminated screen" /
   "Restart app automatically"), and a maximized window keeps its bar after its app exits.
 - **App list filter** for All, Shared, Private or JIT apps (in the Sort menu).
-- **Refined app rows** (rounder corners, larger text, tinted Run and Install buttons), **Back Up Data
-  Folder** in each app's menu, and **Copy Diagnostics** in Settings.
+- **Back Up Data Folder** in each app's menu and **Copy Diagnostics** in Settings.
 - Build downloads are checked against SHA-256 checksums, and the sign-in fix has a test that runs in CI.
 
 This repository is public, like every fork of a public repository on GitHub.
