@@ -6,6 +6,11 @@ name: Fork - Build and Release Nightly
 
 on:
   workflow_dispatch:
+    inputs:
+      stable:
+        description: Also publish this build as a full (Latest) release named v<version>
+        type: boolean
+        default: false
 
 concurrency:
   group: fork-release
@@ -103,6 +108,7 @@ jobs:
           Built by $RUN_URL
 
           The built-in SideStore updates LiveContainer from this source: https://github.com/${{ github.repository }}/releases/download/nightly/apps_fork.json"
+          printf '%s\n' "$notes" > release-notes.md
           files="LiveContainer.ipa LiveContainer+SideStore.ipa apps_fork.json build-info.json"
           if gh release view --repo "$GITHUB_REPOSITORY" nightly >/dev/null 2>&1; then
             gh release upload --repo "$GITHUB_REPOSITORY" nightly $files --clobber
@@ -111,6 +117,14 @@ jobs:
             gh release create --repo "$GITHUB_REPOSITORY" nightly $files --prerelease --target "$COMMIT_SHA" \
               --title "Nightly ($(date -u +%Y-%m-%d))" --notes "$notes"
           fi
+      - name: Publish full release
+        if: inputs.stable
+        run: |
+          tag="v$NIGHTLY_VERSION"
+          gh release delete --repo "$GITHUB_REPOSITORY" "$tag" --cleanup-tag --yes 2>/dev/null || true
+          gh release create --repo "$GITHUB_REPOSITORY" "$tag" LiveContainer.ipa LiveContainer+SideStore.ipa \
+            --target "$COMMIT_SHA" --latest --title "LiveContainer + SideStore $NIGHTLY_VERSION" \
+            --notes-file release-notes.md
       - name: Keep the last 5 builds for rollback
         run: |
           tag="build-$NIGHTLY_VERSION"
@@ -120,7 +134,7 @@ jobs:
             --prerelease --target "$COMMIT_SHA" --title "Build $NIGHTLY_VERSION" \
             --notes "Kept for rollback. The current build is always the nightly release.
 
-          $notes"
+          $(cat release-notes.md)"
           gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName,createdAt \
             --jq '[.[] | select(.tagName | startswith("build-"))] | sort_by(.createdAt) | reverse | .[5:] | .[].tagName' |
           while read -r old; do
