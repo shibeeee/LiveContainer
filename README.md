@@ -1,3 +1,9 @@
+> [!NOTE]
+> **This is a fork.** It adds a fix for the built-in SideStore's Apple ID sign-in (HTTP 503), builds
+> SideStore from source with a few fixes, and updates itself from the official LiveContainer.
+> **[Read what's different and download it here.](FORK.md)** The rest of this README is the official
+> LiveContainer README.
+
 <div align="center">
    <img width="217" height="217" src="./screenshots/livecontainer_icon.png" alt="Logo">
 </div>

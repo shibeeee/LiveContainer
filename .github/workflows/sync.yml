@@ -91,7 +91,15 @@ jobs:
           echo "main: $head (last release: $last_commit)"
           echo "SideStore nightly: $current_ss (last release: $last_ss)"
           echo "SideStore source: $current_src (last release: $last_src)"
-          if [ "$head" != "$last_commit" ] || [ "$current_ss" != "$last_ss" ] || [ "$current_src" != "$last_src" ]; then
+          code_changed=false
+          if [ "$head" != "$last_commit" ]; then
+            # a change that only touches Markdown files doesn't need a new build
+            if [ -z "$last_commit" ] || ! git cat-file -e "$last_commit^{commit}" 2>/dev/null \
+                || git diff --name-only "$last_commit" "$head" | grep -qv '\.md$'; then
+              code_changed=true
+            fi
+          fi
+          if [ "$code_changed" = true ] || [ "$current_ss" != "$last_ss" ] || [ "$current_src" != "$last_src" ]; then
             echo "rebuild=true" >> $GITHUB_OUTPUT
           fi
 
