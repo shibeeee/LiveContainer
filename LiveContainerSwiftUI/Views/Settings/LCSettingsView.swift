@@ -342,8 +342,9 @@ struct LCSettingsView: View {
                     Text("lc.settings.copyDiagnosticsDesc".loc)
                 }
                 .task {
-                    if latestNightlyVersion == nil {
-                        latestNightlyVersion = await Self.fetchLatestNightlyVersion()
+                    // runs each time Settings appears, so a nightly published meanwhile shows up
+                    if let latest = await Self.fetchLatestNightlyVersion() {
+                        latestNightlyVersion = latest
                     }
                 }
                 

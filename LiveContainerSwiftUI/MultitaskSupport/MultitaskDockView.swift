@@ -1111,6 +1111,7 @@ class IconCacheManager {
 struct AppIconView: View {
     let app: DockAppModel
     @State private var isPressed = false
+    @State private var pressStart: Date? = nil
     @State private var appIcon: UIImage?
     @State private var isLoading = true
     @EnvironmentObject var dockManager: MultitaskDockManager
@@ -1142,9 +1143,14 @@ struct AppIconView: View {
         .onPressGesture(
             onPress: { 
                 isPressed = true
+                if pressStart == nil { pressStart = Date() }
             },
             onRelease: { location in 
                 isPressed = false
+                // a long press opens the context menu; don't also treat it as a tap
+                let pressDuration = pressStart.map { Date().timeIntervalSince($0) } ?? 0
+                pressStart = nil
+                guard pressDuration < 0.4 else { return }
                 let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
                 impactFeedback.impactOccurred()
                 let _ = dockManager.bringMultitaskViewToFront(uuid: app.appUUID, from: location)

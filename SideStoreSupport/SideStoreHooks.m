@@ -8,8 +8,8 @@
 #include "../LiveContainer/LCSharedUtils.h"
 #include "XPCServer.h"
 #import <sys/sysctl.h>
-#import <objc/message.h>
 #import <Security/Security.h>
+#import <objc/message.h>
 @import UserNotifications;
 @import UIKit;
 
@@ -242,16 +242,21 @@ static void LCRepairSideStoreSignInIfRequested(void) {
     if (![shared boolForKey:@"LCRepairSideStoreSignIn"]) return;
     [shared removeObjectForKey:@"LCRepairSideStoreSignIn"];
 
-    // SideStore's keychain service is +[NSBundle appbundleIdentifier], hooked above to LiveContainer's
-    NSString* service = ((NSString* (*)(id, SEL))objc_msgSend)(NSBundle.class, @selector(appbundleIdentifier));
-    for (NSString* account in @[@"adiPb", @"appleIDEmailAddress", @"appleIDPassword", @"appleIDAdsid", @"appleIDXcodeToken"]) {
-        NSDictionary* query = @{
-            (__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
-            (__bridge id)kSecAttrService: service,
-            (__bridge id)kSecAttrAccount: account,
-        };
-        OSStatus status = SecItemDelete((__bridge CFDictionaryRef)query);
-        NSLog(@"[LC] Repair Sign-In: %@ -> %d", account, (int)status);
+    // SideStore's keychain service is +[NSBundle appbundleIdentifier] (hooked above). Also try the ids it
+    // could have used without the hook. Always matching the service keeps guest apps' keychains untouched.
+    NSString* hooked = ((NSString* (*)(id, SEL))objc_msgSend)(NSBundle.class, @selector(appbundleIdentifier));
+    NSMutableOrderedSet<NSString*>* services = [NSMutableOrderedSet orderedSetWithObjects:@"com.kdt.livecontainer", @"com.SideStore.SideStore", nil];
+    if ([hooked isKindOfClass:NSString.class]) [services insertObject:hooked atIndex:0];
+    for (NSString* service in services) {
+        for (NSString* account in @[@"adiPb", @"appleIDEmailAddress", @"appleIDPassword", @"appleIDAdsid", @"appleIDXcodeToken"]) {
+            NSDictionary* query = @{
+                (__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
+                (__bridge id)kSecAttrService: service,
+                (__bridge id)kSecAttrAccount: account,
+            };
+            OSStatus status = SecItemDelete((__bridge CFDictionaryRef)query);
+            if (status != errSecItemNotFound) NSLog(@"[LC] Repair Sign-In: %@/%@ -> %d", service, account, (int)status);
+        }
     }
 }
 
@@ -272,9 +277,10 @@ void installSideStoreHooks(void) {
     Method altStoreSourceURLMethod = class_getClassMethod(PrivClass(Source), @selector(altStoreSourceURL));
     method_setImplementation(altStoreSourceURLMethod, (IMP)SideStoreSource_hook_altStoreSourceURL);
     
+    // before SideStore reads its keychain; SideStore may open as a LiveProcess when apps launch in multitask
+    LCRepairSideStoreSignInIfRequested();
+    
     if (!NSUserDefaults.isLiveProcess) {
-        LCRepairSideStoreSignInIfRequested();
-        
         // add escape button
         Method viewDidLoadMethod = class_getInstanceMethod(PrivClass(MyAppsViewController), @selector(viewDidLoad));
         SideStoreMyAppsViewController_orig_viewDidload = (void (*)(UICollectionViewController *, SEL))method_getImplementation(viewDidLoadMethod);

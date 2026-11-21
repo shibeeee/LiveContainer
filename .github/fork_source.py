@@ -27,9 +27,9 @@ def main():
     repo = os.environ["GITHUB_REPOSITORY"]
     info = read_info_plist(ipa_path)
     version = info["CFBundleShortVersionString"]
-    # nightly versions end in PATCH*1000 + run number; anything lower would look older than what is installed
-    if int(version.split(".")[-1]) < 1000:
-        sys.exit(f"Refusing to publish {version}: the nightly version was not raised (is fork_release set?)")
+    # an unstamped build keeps the upstream version, which would look older than an installed nightly
+    if not info.get("LCForkNightly"):
+        sys.exit(f"Refusing to publish {version}: the nightly version was not stamped (is fork_release set?)")
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     commit = os.environ.get("COMMIT_SHA", "")[:7]
     message = os.environ.get("COMMIT_MSG", "").strip()

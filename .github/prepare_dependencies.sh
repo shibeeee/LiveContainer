@@ -19,5 +19,6 @@ if [ -n "$GITHUB_REPOSITORY" ] && [ "$GITHUB_REPOSITORY" != "LiveContainer/LiveC
         echo "Fork nightly: version $BASE -> $FORK_VERSION"
         /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $FORK_VERSION" "$PLIST"
         /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $FORK_VERSION" "$PLIST"
+        /usr/libexec/PlistBuddy -c "Add :LCForkNightly bool true" "$PLIST"
     fi
 fi

@@ -114,6 +114,8 @@ jobs:
       - name: Keep the last 5 builds for rollback
         run: |
           tag="build-$NIGHTLY_VERSION"
+          # a re-run of the same run has the same version: replace that build instead of failing
+          gh release delete --repo "$GITHUB_REPOSITORY" "$tag" --cleanup-tag --yes 2>/dev/null || true
           gh release create --repo "$GITHUB_REPOSITORY" "$tag" LiveContainer.ipa LiveContainer+SideStore.ipa \
             --prerelease --target "$COMMIT_SHA" --title "Build $NIGHTLY_VERSION" \
             --notes "Kept for rollback. The current build is always the nightly release.
