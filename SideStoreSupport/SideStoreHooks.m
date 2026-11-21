@@ -95,6 +95,38 @@ static id SSSceneObserver;
 
 @end
 
+// Since 2026-11-20 Apple's GSA edge answers 503 when X-Mme-Client-Info names the OS "macOS;".
+// "Mac OS X;" is accepted, so rewrite it on every request SideStore builds, whatever the
+// value's source (built-in default, anisette server, or user override).
+static NSString* LCFixMmeClientInfo(NSString* field, NSString* value) {
+    if (![field isKindOfClass:NSString.class] || ![value isKindOfClass:NSString.class]) return value;
+    if ([field caseInsensitiveCompare:@"X-Mme-Client-Info"] != NSOrderedSame) return value;
+    return [value stringByReplacingOccurrencesOfString:@"<macOS;"
+                                            withString:@"<Mac OS X;"
+                                               options:NSCaseInsensitiveSearch
+                                                 range:NSMakeRange(0, value.length)];
+}
+
+@implementation NSMutableURLRequest(SideStoreHooks)
+
+- (void)lc_setValue:(NSString*)value forHTTPHeaderField:(NSString*)field {
+    [self lc_setValue:LCFixMmeClientInfo(field, value) forHTTPHeaderField:field];
+}
+
+- (void)lc_addValue:(NSString*)value forHTTPHeaderField:(NSString*)field {
+    [self lc_addValue:LCFixMmeClientInfo(field, value) forHTTPHeaderField:field];
+}
+
+- (void)lc_setAllHTTPHeaderFields:(NSDictionary<NSString*, NSString*>*)fields {
+    NSMutableDictionary* fixed = fields ? [NSMutableDictionary dictionaryWithCapacity:fields.count] : nil;
+    for (NSString* key in fields) {
+        fixed[key] = LCFixMmeClientInfo(key, fields[key]);
+    }
+    [self lc_setAllHTTPHeaderFields:fixed];
+}
+
+@end
+
 NSURL* SideStoreSource_hook_altStoreSourceURL(id self, SEL cmd) {
     static NSURL* sourceURL = nil;
     static dispatch_once_t onceToken;
@@ -198,7 +230,12 @@ void installSideStoreHooks(void) {
     swizzle(NSBundle.class, @selector(altstoreAppGroup), @selector(hook_altstoreAppGroup));
     swizzleClassMethod(NSBundle.class, @selector(activeBundle), @selector(hook_activeBundle));
     swizzleClassMethod(NSBundle.class, @selector(baseAltStoreAppGroupID), @selector(hook_baseAltStoreAppGroupID));
-    
+
+    // fix Apple ID sign-in 503 (see LCFixMmeClientInfo)
+    swizzle(NSMutableURLRequest.class, @selector(setValue:forHTTPHeaderField:), @selector(lc_setValue:forHTTPHeaderField:));
+    swizzle(NSMutableURLRequest.class, @selector(addValue:forHTTPHeaderField:), @selector(lc_addValue:forHTTPHeaderField:));
+    swizzle(NSMutableURLRequest.class, @selector(setAllHTTPHeaderFields:), @selector(lc_setAllHTTPHeaderFields:));
+
     // replace altStoreSourceURL
     Method altStoreSourceURLMethod = class_getClassMethod(PrivClass(Source), @selector(altStoreSourceURL));
     method_setImplementation(altStoreSourceURLMethod, (IMP)SideStoreSource_hook_altStoreSourceURL);
