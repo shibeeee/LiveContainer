@@ -92,6 +92,7 @@ final class LCAppBannerViewController: UIViewController, UIContextMenuInteractio
     }
 
     @objc private func runButtonTapped() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
         if #available(iOS 16.0, *),
            let currentDataFolder = configuration.model.uiSelectedContainer?.folderName,
            MultitaskManager.isUsing(container: currentDataFolder) {
