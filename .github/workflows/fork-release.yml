@@ -36,10 +36,21 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: ${{ needs.build.outputs.artifact }}
+          path: artifacts
       - name: Download LiveContainer+SideStore.ipa
         uses: actions/download-artifact@v8
         with:
           name: ${{ needs.build.outputs.artifact2 }}
+          path: artifacts
+      - name: Collect IPA files
+        run: |
+          # each artifact may unpack as a file or as a folder holding the file
+          for name in "LiveContainer.ipa" "LiveContainer+SideStore.ipa"; do
+            file=$(find artifacts -type f -name "$name" | head -1)
+            [ -n "$file" ] || { echo "::error::$name not found in artifacts"; find artifacts; exit 1; }
+            mv "$file" "./$name"
+          done
+          ls -l *.ipa
       - name: Collect build info
         run: |
           git remote add upstream https://github.com/LiveContainer/LiveContainer.git
