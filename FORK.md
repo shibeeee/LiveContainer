@@ -31,8 +31,13 @@ The built-in SideStore checks this fork's source for new LiveContainer builds:
 https://github.com/shibeeee/LiveContainer/releases/download/nightly/apps_fork.json
 ```
 
-Every build gets a higher version number than the last (for example `3.8.14006`), so SideStore always
-offers the newest nightly. If an older LiveContainer source from the official project is still listed
+Every nightly gets a higher version number than the last (for example `3.8.14006`), so SideStore
+always offers the newest one, with a "What's new" list of the changes since the previous nightly.
+LiveContainer's Settings also shows when a newer nightly is out.
+
+**Rolling back:** the 5 most recent builds are also kept as `build-<version>` releases on the
+[releases page](https://github.com/shibeeee/LiveContainer/releases). Install an older one with iloader
+if a nightly misbehaves. If an older LiveContainer source from the official project is still listed
 in SideStore, remove it so it doesn't offer the official build over this one.
 
 ## What's different from the official build
@@ -44,6 +49,9 @@ in SideStore, remove it so it doesn't offer the official build over this one.
   label shows "sign-in fix on" when it is active.
 - When Apple still turns a sign-in away (HTTP 429 or 5xx), SideStore says what to do instead of
   "Invalid server response: unparseable format".
+- **Repair SideStore Sign-In** in LiveContainer's Settings signs the built-in SideStore out and clears
+  its anisette data (adi.pb), keeping your apps and signing certificate. SideStore opens so you can
+  sign in again.
 
 **SideStore**
 - Built from [LiveContainer/SideStore](https://github.com/LiveContainer/SideStore) (branch
@@ -59,8 +67,14 @@ in SideStore, remove it so it doesn't offer the official build over this one.
   window keeps its window bar after its app exits, so it can still be closed
   ([#1595](https://github.com/LiveContainer/LiveContainer/issues/1595),
   [#822](https://github.com/LiveContainer/LiveContainer/issues/822)).
+- Multitask dock: long-press an app for Bring to Front, Minimize or Close
+  ([#1473](https://github.com/LiveContainer/LiveContainer/issues/1473)), and the hidden dock swipes
+  back in reliably when several windows are open
+  ([#1683](https://github.com/LiveContainer/LiveContainer/issues/1683)).
 - App list: a Show menu (in the sort menu) filters All, Shared, Private or JIT apps
   ([#1573](https://github.com/LiveContainer/LiveContainer/issues/1573)).
+- Settings shows when a newer nightly is available, and opens SideStore to install it
+  ([#336](https://github.com/LiveContainer/LiveContainer/issues/336)).
 - Back Up Data Folder in an app's long-press menu copies its data folder to Files.
 - Copy Diagnostics in Settings copies app, iOS and device versions for bug reports. Nothing about your
   account is included.
@@ -71,8 +85,8 @@ in SideStore, remove it so it doesn't offer the official build over this one.
 | Workflow | When | What it does |
 |---|---|---|
 | [`sync.yml`](.github/workflows/sync.yml) | Every 6 hours, or by hand | Merges new commits from LiveContainer/LiveContainer into `main`. Starts a build when `main`, SideStore's source or the SideStore nightly changed since the last release. |
-| [`fork-release.yml`](.github/workflows/fork-release.yml) | Started by `sync.yml`, or by hand | Builds both IPAs, writes the AltSource (`apps_fork.json`) and `build-info.json`, and publishes the `nightly` release. |
-| [`build.yml`](.github/workflows/build.yml) | Every push | Builds the IPAs as workflow artifacts and runs the sign-in fix test. Publishes nothing in this fork. |
+| [`fork-release.yml`](.github/workflows/fork-release.yml) | Started by `sync.yml`, or by hand | Builds both IPAs, writes the AltSource (`apps_fork.json`) and `build-info.json`, publishes the `nightly` release and a `build-<version>` copy, and removes builds older than the last 5. If it fails, it opens a "Nightly build failed" issue (which emails you); the next successful build closes it. |
+| [`build.yml`](.github/workflows/build.yml) | Every push | Builds the IPAs as workflow artifacts and runs the sign-in fix test. Publishes nothing in this fork. These test builds keep the official version number, which is lower than any nightly, so installing one never stops SideStore from offering the next nightly. |
 
 If merging upstream conflicts, or upstream changes files in `.github/workflows` (which the workflow
 token is not allowed to push), the sync opens an issue here with the commands to merge by hand. Builds
@@ -98,9 +112,8 @@ The build scripts are in [`.github/`](.github):
 
 - **Sign-in still says 503:** wait a few minutes, since repeated failed attempts cause a temporary 503
   of their own. Then reset adi.pb (with "keep headers" unchecked) and try again.
-- **Other sign-in errors (-22410, 403, -45061):** these come from account or anisette state. Switch
-  the anisette server to jkcoxson, and clear keychain items and refresh attempts in SideStore's
-  Developer Options.
+- **Other sign-in errors (-22410, 403, -45061):** these come from account or anisette state. Try
+  **Repair SideStore Sign-In** in LiveContainer's Settings, or switch the anisette server to jkcoxson.
 - **Reporting a problem:** tap Copy Diagnostics in LiveContainer's Settings and include the result.
 
 ## Credits and license
