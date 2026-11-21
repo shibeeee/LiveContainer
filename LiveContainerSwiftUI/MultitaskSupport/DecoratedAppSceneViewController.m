@@ -15,6 +15,7 @@
 @property(nonatomic) CGRect originalFrame;
 @property(nonatomic) UIBarButtonItem *maximizeButton;
 @property(nonatomic) bool isAppTerminationRequested;
+@property(nonatomic) bool isAppExited;
 @end
 
 @implementation DecoratedAppSceneViewController
@@ -349,6 +350,8 @@
         label.text = NSLocalizedString(@"lc.multitaskAppWindow.appTerminated", @"");
         label.textAlignment = NSTextAlignmentCenter;
         [self.view insertSubview:label atIndex:0];
+        self.isAppExited = YES;
+        [self updateVerticalConstraints];
     }
 }
 
@@ -491,7 +494,8 @@
     [self.view layoutIfNeeded];
     [UIView animateWithDuration:0.3 animations:^{
         BOOL bottomWindowBar = [NSUserDefaults.lcSharedDefaults boolForKey:@"LCMultitaskBottomWindowBar"];
-        BOOL hideWindowBar = MultitaskDockManager.shared.isCollapsed && self.isMaximized;
+        // once the app has exited, always show the bar so the window can still be closed (#1595, #822)
+        BOOL hideWindowBar = MultitaskDockManager.shared.isCollapsed && self.isMaximized && !self.isAppExited;
         CGFloat navBarHeight = hideWindowBar ? 0 : 44;
         self.navigationBar.alpha = hideWindowBar ? 0 : 1;
         self.navigationBar.hidden = hideWindowBar;
