@@ -97,7 +97,8 @@ the Actions tab and re-enable "Fork - Sync Upstream".
 
 ## Build it yourself
 
-Run "Fork - Build and Release Nightly" from the Actions tab. Pushing to any branch also builds both
+Run "Fork - Build and Release Nightly" from the Actions tab. Tick **stable** to also publish that build
+as a full release (`v<version>`, marked Latest) next to the nightly. Pushing to any branch also builds both
 IPAs as artifacts with "Xcode - Build". The build runs on GitHub's `xcode-27` macOS runner and needs
 no secrets.
 
