@@ -5,16 +5,19 @@ unzip OpenSSL.xcframework.zip
 rm OpenSSL.xcframework.zip
 mv OpenSSL.xcframework Dependencies/OpenSSL.xcframework
 
-# Builds made in a fork get a version that always goes up, so the fork's own AltSource
-# offers each new build as an update, and built-in SideStore updates LC from the fork.
+# Fork builds: built-in SideStore updates LC from the fork's own AltSource.
 if [ -n "$GITHUB_REPOSITORY" ] && [ "$GITHUB_REPOSITORY" != "LiveContainer/LiveContainer" ]; then
     PLIST=LiveContainer/Info.plist
-    BASE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$PLIST")
-    MAJOR_MINOR=${BASE%.*}
-    PATCH=${BASE##*.}
-    FORK_VERSION="$MAJOR_MINOR.$((PATCH * 1000 + GITHUB_RUN_NUMBER))"
-    echo "Fork build: version $BASE -> $FORK_VERSION"
-    /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $FORK_VERSION" "$PLIST"
-    /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $FORK_VERSION" "$PLIST"
     /usr/libexec/PlistBuddy -c "Add :LCUpdateSourceURL string https://github.com/$GITHUB_REPOSITORY/releases/download/nightly/apps_fork.json" "$PLIST"
+    # Only the nightly release gets a version that always goes up. Test builds keep the upstream
+    # version, which is lower, so installing one never hides a newer nightly from SideStore.
+    if [ "$FORK_RELEASE" = "true" ]; then
+        BASE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$PLIST")
+        MAJOR_MINOR=${BASE%.*}
+        PATCH=${BASE##*.}
+        FORK_VERSION="$MAJOR_MINOR.$((PATCH * 1000 + GITHUB_RUN_NUMBER))"
+        echo "Fork nightly: version $BASE -> $FORK_VERSION"
+        /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $FORK_VERSION" "$PLIST"
+        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $FORK_VERSION" "$PLIST"
+    fi
 fi

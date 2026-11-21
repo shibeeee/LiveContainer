@@ -4,6 +4,11 @@ on:
   push:
   pull_request:
   workflow_call:
+    inputs:
+      fork_release:
+        description: Stamp an always-increasing version for the fork's nightly release
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs: 
       release__nightly:
@@ -66,6 +71,8 @@ jobs:
           file_to_build=`echo $file_to_build | awk '{$1=$1;print}'`
           echo "file_to_build=$file_to_build" >> $GITHUB_OUTPUT
       - name: Prepare Dependencies
+        env:
+          FORK_RELEASE: ${{ inputs.fork_release }}
         run: |
           sh .github/prepare_dependencies.sh
       - name: Archive

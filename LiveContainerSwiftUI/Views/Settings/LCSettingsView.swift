@@ -747,6 +747,9 @@ extension LCSettingsView {
         ]
         if UserDefaults.sideStoreExist() {
             lines.append("Built-in SideStore: \(BuiltInSideStoreAppInfo.shared.version() ?? "unknown")")
+            if let fromSource = Bundle.main.object(forInfoDictionaryKey: "LCSideStoreFromSource") as? Bool {
+                lines.append("SideStore built from source with patches: \(fromSource ? "yes" : "no")")
+            }
         }
         if let source = Bundle.main.object(forInfoDictionaryKey: "LCUpdateSourceURL") as? String {
             lines.append("Update source: \(source)")

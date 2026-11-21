@@ -45,7 +45,9 @@ cd tmp
 if [ -n "$GITHUB_REPOSITORY" ] && [ "$GITHUB_REPOSITORY" != "LiveContainer/LiveContainer" ] \
     && bash ../.github/build_sidestore.sh "$PWD/SideStore.ipa"; then
     echo "Using SideStore built from source"
+    SIDESTORE_FROM_SOURCE=true
 else
+    SIDESTORE_FROM_SOURCE=false
     if [ -n "$GITHUB_REPOSITORY" ] && [ "$GITHUB_REPOSITORY" != "LiveContainer/LiveContainer" ]; then
         echo "::warning title=SideStore source build failed::Using the prebuilt SideStore nightly instead, so SideStorePatches are not in this build."
     fi
@@ -80,6 +82,9 @@ mv ./Payload/LiveContainer.app/PlugIns/LiveWidgetExtension.appex/AltWidgetExtens
 
 # Sign
 ldid -S.github/sidelc/LiveWidgetExtension_adhoc.xml ./Payload/LiveContainer.app/PlugIns/LiveWidgetExtension.appex/LiveWidgetExtension
+
+# record whether SideStore was built from source with SideStorePatches (read by fork_source.py and Copy Diagnostics)
+/usr/libexec/PlistBuddy -c "Add :LCSideStoreFromSource bool $SIDESTORE_FROM_SOURCE" ./Payload/LiveContainer.app/Info.plist
 
 # package
 zip -r "$scheme+SideStore.ipa" "Payload" -x "._*" -x ".DS_Store" -x "__MACOSX"

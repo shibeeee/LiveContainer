@@ -4,7 +4,8 @@ Built-in SideStore in fork builds reads this file (see LCUpdateSourceURL in
 prepare_dependencies.sh), so each new nightly shows up as an update on the device.
 
 Usage: python fork_source.py <ipa> <out.json>
-Env: GITHUB_REPOSITORY, COMMIT_SHA, COMMIT_MSG, RUN_URL, UPSTREAM_SHA, SIDESTORE_SOURCE
+Env: GITHUB_REPOSITORY, COMMIT_SHA, COMMIT_MSG, RUN_URL, UPSTREAM_SHA, SIDESTORE_SOURCE,
+     CHANGES (one "- line" per change since the last release, optional)
 """
 import json
 import os
@@ -26,16 +27,25 @@ def main():
     repo = os.environ["GITHUB_REPOSITORY"]
     info = read_info_plist(ipa_path)
     version = info["CFBundleShortVersionString"]
+    # nightly versions end in PATCH*1000 + run number; anything lower would look older than what is installed
+    if int(version.split(".")[-1]) < 1000:
+        sys.exit(f"Refusing to publish {version}: the nightly version was not raised (is fork_release set?)")
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     commit = os.environ.get("COMMIT_SHA", "")[:7]
     message = os.environ.get("COMMIT_MSG", "").strip()
 
-    description = (
-        f"Nightly build of {repo} from {commit}: {message}\n"
-        f"Upstream LiveContainer: {os.environ.get('UPSTREAM_SHA', 'unknown')[:7]}\n"
-        f"SideStore source: {os.environ.get('SIDESTORE_SOURCE', 'unknown')[:7]}\n"
-        f"Built by {os.environ.get('RUN_URL', '')}"
-    )
+    changes = os.environ.get("CHANGES", "").strip()
+    if info.get("LCSideStoreFromSource", True):
+        sidestore = f"SideStore source: {os.environ.get('SIDESTORE_SOURCE', 'unknown')[:7]}, with this fork's patches"
+    else:
+        sidestore = "Warning: SideStore could not be built from source, so this build has the prebuilt SideStore without this fork's patches."
+    description = "\n".join(part for part in [
+        f"What's new:\n{changes}" if changes else "",
+        f"Nightly build of {repo} from {commit}: {message}",
+        f"Upstream LiveContainer: {os.environ.get('UPSTREAM_SHA', 'unknown')[:7]}",
+        sidestore,
+        f"Built by {os.environ.get('RUN_URL', '')}",
+    ] if part)
     release = {
         "version": version,
         "buildVersion": info.get("CFBundleVersion", version),
@@ -84,6 +94,11 @@ def main():
     with open(out_path, "w") as f:
         json.dump(source, f, indent=2)
     print(f"Wrote {out_path} for version {version}")
+    github_env = os.environ.get("GITHUB_ENV")
+    if github_env:
+        with open(github_env, "a") as f:
+            f.write(f"NIGHTLY_VERSION={version}\n")
+            f.write(f"SIDESTORE_FROM_SOURCE={str(info.get('LCSideStoreFromSource', True)).lower()}\n")
 
 
 if __name__ == "__main__":
