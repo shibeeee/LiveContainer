@@ -21016,6 +21016,26 @@
         }
       }
     },
+    "lc.settings.copyDiagnostics" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy Diagnostics"
+          }
+        }
+      }
+    },
+    "lc.settings.copyDiagnosticsDesc" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copies app, iOS and device versions for bug reports. Nothing about your account is included."
+          }
+        }
+      }
+    },
     "lc.settings.darkModeIcon" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -21255,6 +21275,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "預設簽署工具"
+          }
+        }
+      }
+    },
+    "lc.settings.diagnosticsCopied" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copied"
           }
         }
       }

@@ -37,6 +37,7 @@ struct LCSettingsView: View {
     @State var errorInfo = ""
     @State var successShow = false
     @State var successInfo = ""
+    @State private var diagnosticsCopied = false
 
     @State private var certificateDataFound = false
     
@@ -281,6 +282,21 @@ struct LCSettingsView: View {
                     } label: {
                         Text("lc.settings.dataManagement".loc)
                     }
+                }
+                
+                Section {
+                    Button {
+                        UIPasteboard.general.string = Self.diagnosticsText()
+                        diagnosticsCopied = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            diagnosticsCopied = false
+                        }
+                    } label: {
+                        Label(diagnosticsCopied ? "lc.settings.diagnosticsCopied".loc : "lc.settings.copyDiagnostics".loc,
+                              systemImage: diagnosticsCopied ? "checkmark" : "doc.on.doc")
+                    }
+                } footer: {
+                    Text("lc.settings.copyDiagnosticsDesc".loc)
                 }
                 
                 Section {
@@ -712,5 +728,29 @@ struct LCSettingsView: View {
                 
             }
         }
+    }
+}
+
+extension LCSettingsView {
+    // Versions and setup details for bug reports. Contains no account or personal data.
+    static func diagnosticsText() -> String {
+        var systemInfo = utsname()
+        uname(&systemInfo)
+        let model = withUnsafePointer(to: &systemInfo.machine) {
+            $0.withMemoryRebound(to: CChar.self, capacity: 1) { String(cString: $0) }
+        }
+        var lines = [
+            "LiveContainer: \(LCUtils.getVersionInfo() ?? "unknown")",
+            "iOS: \(ProcessInfo.processInfo.operatingSystemVersionString)",
+            "Device: \(model)",
+            "JIT-less certificate: \(LCSharedUtils.certificatePassword() != nil ? "imported" : "not imported")",
+        ]
+        if UserDefaults.sideStoreExist() {
+            lines.append("Built-in SideStore: \(BuiltInSideStoreAppInfo.shared.version() ?? "unknown")")
+        }
+        if let source = Bundle.main.object(forInfoDictionaryKey: "LCUpdateSourceURL") as? String {
+            lines.append("Update source: \(source)")
+        }
+        return lines.joined(separator: "\n")
     }
 }
