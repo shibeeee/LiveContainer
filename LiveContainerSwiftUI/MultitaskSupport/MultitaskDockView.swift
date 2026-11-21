@@ -676,6 +676,19 @@ class AppInfoProvider {
     }
     
     // Recursively find multitask view
+    private func windowController(for uuid: String) -> DecoratedAppSceneViewController? {
+        apps.first { $0.appUUID == uuid }?.view?._viewDelegate() as? DecoratedAppSceneViewController
+    }
+    
+    func minimizeApp(uuid: String) {
+        windowController(for: uuid)?.minimizeWindow()
+    }
+    
+    // same as the window bar's close button: terminates the app and removes it from the dock
+    func closeApp(uuid: String) {
+        windowController(for: uuid)?.closeWindow()
+    }
+    
     private func findMultitaskView(in view: UIView, withUUID uuid: String) -> UIView? {
         apps.first { $0.appUUID == uuid }?.view
     }
@@ -1135,6 +1148,23 @@ struct AppIconView: View {
             }
         )
         .contentShape(Rectangle())
+        .contextMenu {
+            Button {
+                _ = dockManager.bringMultitaskViewToFront(uuid: app.appUUID)
+            } label: {
+                Label("lc.multitaskDock.bringToFront".loc, systemImage: "macwindow")
+            }
+            Button {
+                dockManager.minimizeApp(uuid: app.appUUID)
+            } label: {
+                Label("lc.multitaskDock.minimize".loc, systemImage: "minus.circle")
+            }
+            Button(role: .destructive) {
+                dockManager.closeApp(uuid: app.appUUID)
+            } label: {
+                Label("lc.common.close".loc, systemImage: "xmark.circle")
+            }
+        }
     }
     
     private func loadAppIcon() {

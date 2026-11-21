@@ -21899,6 +21899,26 @@
         }
       }
     },
+    "lc.multitaskDock.bringToFront" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bring to Front"
+          }
+        }
+      }
+    },
+    "lc.multitaskDock.minimize" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minimize"
+          }
+        }
+      }
+    },
     "lc.settings.FrameIcon" : {
       "extractionState" : "manual",
       "localizations" : {
