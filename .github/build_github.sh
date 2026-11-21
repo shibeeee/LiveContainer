@@ -1,5 +1,6 @@
 # copy lc
 wget https://github.com/LiveContainer/dylibify/releases/download/1.0/dylibify
+echo "6d23f6a2fc4d8442f87caa1161aebe6ecaafd0e8c41ce205da007efb04fc82c7  dylibify" | shasum -a 256 -c - || exit 1
 chmod +x dylibify
 brew install ldid
 
@@ -42,6 +43,8 @@ mv ./tmp/SideStoreSupport.framework Payload/LiveContainer.app/Frameworks
 # download SideStore
 cd tmp
 wget https://github.com/LiveContainer/SideStore/releases/download/nightly/SideStore.ipa
+# record which SideStore nightly went into this build
+shasum -a 256 SideStore.ipa
 unzip SideStore.ipa
 cd ..
 
@@ -67,9 +70,6 @@ mv ./Payload/LiveContainer.app/Frameworks/SideStoreApp.framework/PlugIns/AltWidg
 mv ./Payload/LiveContainer.app/PlugIns/LiveWidgetExtension.appex/AltWidgetExtension ./Payload/LiveContainer.app/PlugIns/LiveWidgetExtension.appex/LiveWidgetExtension
 
 # Sign
-rm -r .zsign_cache
-find payloadlc/Payload -type d -name "_CodeSignature" -exec rm -r {} +
-
 ldid -S.github/sidelc/LiveWidgetExtension_adhoc.xml ./Payload/LiveContainer.app/PlugIns/LiveWidgetExtension.appex/LiveWidgetExtension
 
 # package

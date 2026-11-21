@@ -3,6 +3,7 @@ name: Xcode - Build
 on: 
   push:
   pull_request:
+  workflow_call:
   workflow_dispatch:
     inputs: 
       release__nightly:
@@ -11,6 +12,17 @@ on:
         required: false
 
 jobs:
+  test:
+    name: Test header fix (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Install GNUstep
+        run: sudo apt-get update && sudo apt-get install -y clang libgnustep-base-dev gobjc
+      - name: Run test
+        run: sh .github/tests/run_mme_client_info_test.sh
+
   build:
     name: Build using xcodebuild command
     runs-on: xcode-27
@@ -61,11 +73,17 @@ jobs:
           scheme: ${{ steps.scheme.outputs.scheme }}
           filetype_parameter: ${{ steps.filetype_parameter.outputs.filetype_parameter }}
           file_to_build: ${{ steps.file_to_build.outputs.file_to_build }}
-        run: xcodebuild archive -archivePath "$archive_path" -scheme "$scheme" -"$filetype_parameter" "$file_to_build" -sdk iphoneos -arch arm64 -configuration Release | xcpretty && exit ${PIPESTATUS[0]}
+        run: xcodebuild archive -archivePath "$archive_path" -scheme "$scheme" -"$filetype_parameter" "$file_to_build" -sdk iphoneos -arch arm64 -configuration Release | tee xcodebuild.log | xcpretty && exit ${PIPESTATUS[0]}
+      - name: Upload raw build log
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: xcodebuild.log
+          path: xcodebuild.log
       - name: Tar Build Artifact
         run: tar -cvf "$archive_path.xcarchive.tar" "$archive_path.xcarchive"
       - name: Upload a Build Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.archive_path }}.xcarchive.tar
           path: ${{ env.archive_path }}.xcarchive.tar
@@ -89,7 +107,8 @@ jobs:
     name: Nightly Release
     permissions:
       contents: write
-    if: inputs.release__nightly || github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    # forks publish with fork-release.yml instead
+    if: github.repository == 'LiveContainer/LiveContainer' && (inputs.release__nightly || github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch))
     runs-on: ubuntu-latest
     needs: [build]
     concurrency:
@@ -98,7 +117,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
       - name: Download a Build Artifact
         uses: actions/download-artifact@v8
         with:

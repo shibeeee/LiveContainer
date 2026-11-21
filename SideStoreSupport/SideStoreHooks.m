@@ -95,6 +95,7 @@ static id SSSceneObserver;
 
 @end
 
+// BEGIN MME_CLIENT_INFO_FIX (compiled by .github/tests/mme_client_info_test.m)
 // Since 2026-11-20 Apple's GSA edge answers 503 when X-Mme-Client-Info names the OS "macOS;".
 // "Mac OS X;" is accepted, so rewrite it on every request SideStore builds, whatever the
 // value's source (built-in default, anisette server, or user override).
@@ -120,18 +121,26 @@ static NSString* LCFixMmeClientInfo(NSString* field, NSString* value) {
 - (void)lc_setAllHTTPHeaderFields:(NSDictionary<NSString*, NSString*>*)fields {
     NSMutableDictionary* fixed = fields ? [NSMutableDictionary dictionaryWithCapacity:fields.count] : nil;
     for (NSString* key in fields) {
-        fixed[key] = LCFixMmeClientInfo(key, fields[key]);
+        [fixed setObject:LCFixMmeClientInfo(key, [fields objectForKey:key]) forKey:key];
     }
     [self lc_setAllHTTPHeaderFields:fixed];
 }
 
 @end
+// END MME_CLIENT_INFO_FIX
 
 NSURL* SideStoreSource_hook_altStoreSourceURL(id self, SEL cmd) {
     static NSURL* sourceURL = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        sourceURL = [NSURL URLWithString:@"https://github.com/LiveContainer/LiveContainer/releases/download/1.0/apps_ss_lc.json"];
+        // Builds made from a fork set LCUpdateSourceURL so built-in SideStore updates LC from that fork.
+        NSString* custom = NSUserDefaults.lcMainBundle.infoDictionary[@"LCUpdateSourceURL"];
+        if ([custom isKindOfClass:NSString.class] && custom.length > 0) {
+            sourceURL = [NSURL URLWithString:custom];
+        }
+        if (!sourceURL) {
+            sourceURL = [NSURL URLWithString:@"https://github.com/LiveContainer/LiveContainer/releases/download/1.0/apps_ss_lc.json"];
+        }
     });
     return sourceURL;
 }
