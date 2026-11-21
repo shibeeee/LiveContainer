@@ -541,6 +541,7 @@ struct LCSourcesView: View {
                         }
                         .padding(.vertical)
                     }
+                    .background(Color(.systemGroupedBackground))
                 }
             }
             .navigationTitle("lc.tabView.sources".loc)
@@ -974,7 +975,7 @@ private struct LCSourceAppBanner: View {
     }
     
     private var backgroundColor: Color {
-        dynamicColors ? primaryColor.opacity(0.5) : Color("AppBannerBG")
+        dynamicColors ? primaryColor.opacity(0.18) : Color.clear
     }
     
     private var metadataText: String {
@@ -1034,8 +1035,8 @@ private struct LCSourceAppBanner: View {
                 installAction(app)
             } label: {
                 Text("lc.common.install".loc)
-                    .bold()
-                    .foregroundColor(.white)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(dynamicColors ? textColor : Color("FontColor"))
                     .lineLimit(1)
                     .frame(height: 32)
                     .minimumScaleFactor(0.1)
@@ -1046,15 +1047,16 @@ private struct LCSourceAppBanner: View {
             .frame(height: 32)
             .fixedSize()
             .background(
-                Capsule().fill(dynamicColors ? primaryColor : Color("FontColor"))
+                Capsule().fill((dynamicColors ? primaryColor : Color("FontColor")).opacity(0.18))
             )
             .clipShape(Capsule())
         }
         .padding()
         .frame(height: 88)
         .background {
-            RoundedRectangle(cornerSize: CGSize(width: 22, height: 22))
-                .fill(backgroundColor)
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(Color("AppBannerBG"))
+                .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).fill(backgroundColor))
         }
     }
 }

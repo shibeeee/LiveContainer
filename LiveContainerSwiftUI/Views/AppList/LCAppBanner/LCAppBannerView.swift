@@ -42,7 +42,7 @@ final class LCAppBannerRootView: UIView {
     private func setupView() {
         isOpaque = false
         backgroundColor = .clear
-        layer.cornerRadius = 22
+        layer.cornerRadius = 26
         layer.cornerCurve = .continuous
         clipsToBounds = true
 
@@ -52,15 +52,15 @@ final class LCAppBannerRootView: UIView {
 
         iconImageView.translatesAutoresizingMaskIntoConstraints = false
         iconImageView.contentMode = .scaleAspectFit
-        iconImageView.layer.cornerRadius = 16
+        iconImageView.layer.cornerRadius = 12
         iconImageView.layer.cornerCurve = .continuous
         iconImageView.clipsToBounds = true
         iconImageView.isAccessibilityElement = false
 
-        configureLabel(nameLabel, font: .systemFont(ofSize: 16, weight: .bold))
-        configureLabel(versionLabel, font: .systemFont(ofSize: 12))
-        configureLabel(remarkLabel, font: .systemFont(ofSize: 10))
-        configureLabel(containerLabel, font: .systemFont(ofSize: 8))
+        configureLabel(nameLabel, font: .systemFont(ofSize: 17, weight: .semibold))
+        configureLabel(versionLabel, font: .systemFont(ofSize: 13))
+        configureLabel(remarkLabel, font: .systemFont(ofSize: 12))
+        configureLabel(containerLabel, font: .systemFont(ofSize: 12))
 
         nameLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         nameLabel.setContentHuggingPriority(.required, for: .horizontal)
@@ -101,12 +101,12 @@ final class LCAppBannerRootView: UIView {
             visualBackgroundView.topAnchor.constraint(equalTo: topAnchor),
             visualBackgroundView.bottomAnchor.constraint(equalTo: bottomAnchor),
 
-            iconImageView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
+            iconImageView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
             iconImageView.centerYAnchor.constraint(equalTo: centerYAnchor),
-            iconImageView.widthAnchor.constraint(equalToConstant: 60),
-            iconImageView.heightAnchor.constraint(equalToConstant: 60),
+            iconImageView.widthAnchor.constraint(equalToConstant: 56),
+            iconImageView.heightAnchor.constraint(equalToConstant: 56),
 
-            detailStack.leadingAnchor.constraint(equalTo: iconImageView.trailingAnchor, constant: 10),
+            detailStack.leadingAnchor.constraint(equalTo: iconImageView.trailingAnchor, constant: 14),
             detailStack.trailingAnchor.constraint(lessThanOrEqualTo: runControl.leadingAnchor, constant: -10),
             detailStack.centerYAnchor.constraint(equalTo: centerYAnchor),
 
@@ -134,7 +134,8 @@ final class LCAppBannerRootView: UIView {
         let icon = appInfo.iconIsDarkIcon(darkModeIcon) ?? UIImage()
         let mainColor = Self.extractMainHueColor(appInfo: appInfo, icon: icon, darkModeIcon: darkModeIcon)
         let accentColor = dynamicColors ? mainColor : (UIColor(named: "FontColor") ?? .systemBlue)
-        let textColor = Self.readableTextColor(for: accentColor, traitCollection: traitCollection)
+        // with dynamic colors the details take a readable tint of the icon color, otherwise the system secondary label color
+        let textColor = dynamicColors ? Self.readableTextColor(for: accentColor, traitCollection: traitCollection) : .secondaryLabel
 
         iconImageView.image = icon
         nameLabel.text = model.displayName
@@ -142,7 +143,7 @@ final class LCAppBannerRootView: UIView {
         versionLabel.text = "\(model.version) - \(model.bundleIdentifier)"
         versionLabel.textColor = textColor
         remarkLabel.text = model.uiRemark
-        remarkLabel.textColor = textColor.withAlphaComponent(0.8)
+        remarkLabel.textColor = textColor
         remarkLabel.isHidden = model.uiRemark.isEmpty
         containerLabel.text = model.uiSelectedContainer?.name ?? "lc.appBanner.noDataFolder".loc
         containerLabel.textColor = textColor
@@ -156,11 +157,11 @@ final class LCAppBannerRootView: UIView {
         bit32Badge.isHidden = !model.uiIs32bit
         bit32Badge.backgroundColor = UIColor(named: "32BitBadgeColor") ?? .systemBlue
 
-        visualBackgroundView.backgroundColor = dynamicColors
-            ? mainColor.withAlphaComponent(0.5)
-            : (UIColor(named: "AppBannerBG") ?? .secondarySystemBackground)
+        backgroundColor = UIColor(named: "AppBannerBG") ?? .secondarySystemGroupedBackground
+        visualBackgroundView.backgroundColor = dynamicColors ? mainColor.withAlphaComponent(0.18) : .clear
         runControl.update(
             color: accentColor,
+            textColor: dynamicColors ? Self.readableTextColor(for: accentColor, traitCollection: traitCollection) : accentColor,
             isSigning: model.isSigningInProgress,
             progress: model.signProgress,
             isEnabled: !model.isAppRunning
@@ -340,7 +341,7 @@ final class LCAppBannerRunControl: UIControl {
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.text = "lc.appBanner.run".loc
         titleLabel.textColor = .white
-        titleLabel.font = .systemFont(ofSize: 16, weight: .bold)
+        titleLabel.font = .systemFont(ofSize: 15, weight: .semibold)
         titleLabel.textAlignment = .center
         titleLabel.adjustsFontSizeToFitWidth = true
         titleLabel.minimumScaleFactor = 0.1
@@ -386,12 +387,14 @@ final class LCAppBannerRunControl: UIControl {
         bounds.insetBy(dx: -4, dy: -6).contains(point)
     }
 
-    func update(color: UIColor, isSigning: Bool, progress: Double, isEnabled: Bool) {
+    func update(color: UIColor, textColor: UIColor, isSigning: Bool, progress: Double, isEnabled: Bool) {
         self.progress = min(max(progress, 0), 1)
         self.isEnabled = isEnabled
 
-        baseLayer.backgroundColor = color.withAlphaComponent(isSigning ? 0.2 : 1).cgColor
-        progressCircleLayer.backgroundColor = color.cgColor
+        baseLayer.backgroundColor = color.withAlphaComponent(isSigning ? 0.12 : 0.18).cgColor
+        progressCircleLayer.backgroundColor = color.withAlphaComponent(0.45).cgColor
+        titleLabel.textColor = textColor
+        activityIndicator.color = textColor
         progressCircleLayer.isHidden = !isSigning
         titleLabel.isHidden = isSigning
         if isSigning {
