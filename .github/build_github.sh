@@ -42,10 +42,19 @@ mv ./tmp/SideStoreSupport.framework Payload/LiveContainer.app/Frameworks
 
 # get SideStore: forks build it from source with SideStorePatches/, falling back to the nightly
 cd tmp
-if [ -n "$GITHUB_REPOSITORY" ] && [ "$GITHUB_REPOSITORY" != "LiveContainer/LiveContainer" ] \
+CACHED_SIDESTORE=../sidestore-cache/SideStore.ipa
+if [ -n "$GITHUB_REPOSITORY" ] && [ "$GITHUB_REPOSITORY" != "LiveContainer/LiveContainer" ] && [ -f "$CACHED_SIDESTORE" ]; then
+    # same SideStore commit and patches as a previous build (see the cache step in build.yml)
+    cp "$CACHED_SIDESTORE" SideStore.ipa
+    echo "Using cached SideStore built from source"
+    SIDESTORE_FROM_SOURCE=true
+elif [ -n "$GITHUB_REPOSITORY" ] && [ "$GITHUB_REPOSITORY" != "LiveContainer/LiveContainer" ] \
     && bash ../.github/build_sidestore.sh "$PWD/SideStore.ipa"; then
     echo "Using SideStore built from source"
     SIDESTORE_FROM_SOURCE=true
+    if [ -n "$SIDESTORE_CACHE_KEY" ]; then
+        mkdir -p ../sidestore-cache && cp SideStore.ipa "$CACHED_SIDESTORE"
+    fi
 else
     SIDESTORE_FROM_SOURCE=false
     if [ -n "$GITHUB_REPOSITORY" ] && [ "$GITHUB_REPOSITORY" != "LiveContainer/LiveContainer" ]; then

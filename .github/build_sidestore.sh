@@ -1,7 +1,7 @@
 #!/bin/bash
 # Builds LiveContainer's SideStore fork from source, with the patches in SideStorePatches/ applied.
 # Usage: build_sidestore.sh <output.ipa>
-# Env: SIDESTORE_REF (branch or commit, default LiveContainerSupport)
+# Env: SIDESTORE_REF (branch, default LiveContainerSupport), SIDESTORE_COMMIT (exact commit, optional)
 set -eo pipefail
 
 OUT="$1"
@@ -11,6 +11,11 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 rm -rf "$ROOT/sidestore-src"
 git clone --quiet --branch "$REF" --depth 1 https://github.com/LiveContainer/SideStore.git "$ROOT/sidestore-src"
 cd "$ROOT/sidestore-src"
+# build the exact commit the cache key was made from, even if the branch moved meanwhile
+if [ -n "$SIDESTORE_COMMIT" ] && [ "$(git rev-parse HEAD)" != "$SIDESTORE_COMMIT" ]; then
+    git fetch --quiet --depth 1 origin "$SIDESTORE_COMMIT"
+    git checkout --quiet FETCH_HEAD
+fi
 git submodule update --init --recursive --depth 1
 echo "SideStore source: $(git rev-parse HEAD)"
 

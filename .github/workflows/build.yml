@@ -94,7 +94,23 @@ jobs:
         with:
           name: ${{ env.archive_path }}.xcarchive.tar
           path: ${{ env.archive_path }}.xcarchive.tar
+      - name: Find SideStore commit
+        id: sidestore
+        if: github.repository != 'LiveContainer/LiveContainer'
+        run: |
+          commit=$(git ls-remote https://github.com/LiveContainer/SideStore.git refs/heads/LiveContainerSupport | cut -f1)
+          echo "commit=$commit" >> $GITHUB_OUTPUT
+          echo "key=sidestore-ipa-$commit-${{ hashFiles('SideStorePatches/**', '.github/build_sidestore.sh') }}" >> $GITHUB_OUTPUT
+      - name: Reuse SideStore built from the same source
+        if: github.repository != 'LiveContainer/LiveContainer' && steps.sidestore.outputs.commit != ''
+        uses: actions/cache@v4
+        with:
+          path: sidestore-cache
+          key: ${{ steps.sidestore.outputs.key }}
       - name: Create IPA
+        env:
+          SIDESTORE_COMMIT: ${{ steps.sidestore.outputs.commit }}
+          SIDESTORE_CACHE_KEY: ${{ steps.sidestore.outputs.key }}
         run: |
           sh .github/build_github.sh
 
