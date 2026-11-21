@@ -3,6 +3,9 @@
 > SideStore from source with a few fixes, and updates itself from the official LiveContainer.
 > **[Read what's different and download it here.](FORK.md)** The rest of this README is the official
 > LiveContainer README. - thank you claude its really vibecoded but i checked and it should b nice
+>
+> Download the [latest release](https://github.com/shibeeee/LiveContainer/releases/latest) or the
+> [nightly](https://github.com/shibeeee/LiveContainer/releases/tag/nightly).
 
 <div align="center">
    <img width="217" height="217" src="./screenshots/livecontainer_icon.png" alt="Logo">
