@@ -783,23 +783,26 @@ class AppInfoProvider {
         }
     }
     
+    private var edgeGestureRecognizers: [UIScreenEdgePanGestureRecognizer] = []
+    
     // Add edge gesture recognition areas when dock is hidden
     private func setupEdgeGestureRecognizers() {
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let keyWindow = windowScene.windows.first else { return }
+        // Use the window the dock is in. With more than one scene connected (for example after
+        // opening apps from Home Screen shortcuts) the first scene's window can be a different
+        // one, and the swipe back never arrives (#1683).
+        guard let window = hostingController?.view.window ?? keyWindow else { return }
         
-        keyWindow.gestureRecognizers?.removeAll { gesture in
-            return gesture is UITapGestureRecognizer || gesture is UIScreenEdgePanGestureRecognizer
-        }
+        // remove only the recognizers added here, not other gestures on the window
+        edgeGestureRecognizers.forEach { $0.view?.removeGestureRecognizer($0) }
+        edgeGestureRecognizers.removeAll()
         
         if isDockHidden {
-            let leftEdgeGesture = UIScreenEdgePanGestureRecognizer(target: self, action: #selector(handleEdgeSwipe(_:)))
-            leftEdgeGesture.edges = .left
-            keyWindow.addGestureRecognizer(leftEdgeGesture)
-            
-            let rightEdgeGesture = UIScreenEdgePanGestureRecognizer(target: self, action: #selector(handleEdgeSwipe(_:)))
-            rightEdgeGesture.edges = .right
-            keyWindow.addGestureRecognizer(rightEdgeGesture)
+            for edge in [UIRectEdge.left, .right] {
+                let edgeGesture = UIScreenEdgePanGestureRecognizer(target: self, action: #selector(handleEdgeSwipe(_:)))
+                edgeGesture.edges = edge
+                window.addGestureRecognizer(edgeGesture)
+                edgeGestureRecognizers.append(edgeGesture)
+            }
         }
     }
     
