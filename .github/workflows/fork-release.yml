@@ -78,7 +78,8 @@ jobs:
           last=$(gh release download --repo "$GITHUB_REPOSITORY" nightly -p build-info.json -O - 2>/dev/null | jq -r '.commit // ""' || true)
           changes=""
           if [ -n "$last" ] && git cat-file -e "$last^{commit}" 2>/dev/null; then
-            changes=$(git log --no-merges --format='- %s' "$last..HEAD" -- . ':(exclude)*.md' | head -20)
+            # only commits that change the app: leave out docs and build pipeline changes
+            changes=$(git log --no-merges --format='- %s' "$last..HEAD" -- . ':(exclude)*.md' ':(exclude).github' | head -20)
           fi
           { echo "CHANGES<<EOF_CHANGES"; echo "$changes"; echo "EOF_CHANGES"; } >> $GITHUB_ENV
       - name: Write AltSource and build info
