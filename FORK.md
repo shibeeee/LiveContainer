@@ -47,7 +47,8 @@ https://github.com/shibeeee/LiveContainer/releases/download/nightly/apps_fork.js
 - LiveContainer's Settings shows **Update Available** when a newer nightly is out; tap it to open
   SideStore and install it from My Apps.
 - To roll back, install an older `build-<version>` release with iloader.
-- When LiveContainer is within 3 days of expiring, the Apps tab shows a banner with a **Refresh** button.
+- When LiveContainer is within 3 days of expiring, the Apps tab shows a banner with a **Refresh** button,
+  and a notification reminds you the day before it expires.
 
 ## Automatic refresh
 
@@ -125,6 +126,7 @@ What this fork fixes in automatic refresh:
 |---|---|
 | Repair SideStore Sign-In, update check, Copy Diagnostics | LiveContainer → Settings |
 | Expiry banner with Refresh | Top of the Apps tab, from 3 days before LiveContainer expires |
+| Expiry reminder | A notification the day before LiveContainer expires |
 | Refresh All Apps (for automations) | Shortcuts app → LiveContainer |
 | Show filter | Apps tab → sort menu (top right) → Show |
 | Back Up Data Folder | Long-press an app in the Apps tab |
@@ -147,15 +149,16 @@ What this fork fixes in automatic refresh:
 
 | Workflow | When | What it does |
 |---|---|---|
-| [`sync.yml`](.github/workflows/sync.yml) | Every 6 hours, or by hand | Merges new commits from LiveContainer/LiveContainer into `main`. Starts a release when `main` (anything but Markdown files), SideStore's source or the SideStore nightly changed since the last release. |
+| [`sync.yml`](.github/workflows/sync.yml) | Every hour, or by hand | Merges new commits from LiveContainer/LiveContainer into `main`. Starts a release when `main` (anything but Markdown files), SideStore's source or the SideStore nightly changed since the last release. |
 | [`fork-release.yml`](.github/workflows/fork-release.yml) | Started by `sync.yml`, or by hand | Builds both IPAs, writes the AltSource (`apps_fork.json`) and `build-info.json`, publishes the `nightly` release and a `build-<version>` copy, and removes builds older than the last 5. With **stable** ticked it also publishes a full `v<version>` release marked Latest. If it fails, it opens a "Nightly build failed" issue (which emails you); the next successful build closes it. |
-| [`build.yml`](.github/workflows/build.yml) | Every push | Builds both IPAs as workflow artifacts and runs the sign-in fix test. Publishes nothing in this fork. These test builds keep the official version number, which is lower than any nightly, so installing one never stops SideStore from offering the next nightly. |
+| [`build.yml`](.github/workflows/build.yml) | Every push that changes more than Markdown files | Builds both IPAs as workflow artifacts and runs the sign-in fix test. Publishes nothing in this fork. These test builds keep the official version number, which is lower than any nightly, so installing one never stops SideStore from offering the next nightly. |
 
 If merging upstream conflicts, or upstream changes files in `.github/workflows` (which the workflow token
 is not allowed to push), the sync opens an issue here with the commands to merge by hand. Builds keep
 using the last merged version until then.
 
-GitHub pauses scheduled workflows in repositories with no activity for 60 days. If updates stop, open the
+GitHub doesn't guarantee scheduled runs: under load it delays or skips them, which is why the sync runs
+hourly. It also pauses scheduled workflows in repositories with no activity for 60 days. If updates stop, open the
 Actions tab and re-enable "Fork - Sync Upstream".
 
 ## Build it yourself

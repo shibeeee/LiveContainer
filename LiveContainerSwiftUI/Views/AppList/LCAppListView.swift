@@ -8,6 +8,7 @@
 import Combine
 import SwiftUI
 import UniformTypeIdentifiers
+import UserNotifications
 
 class SearchContext: ObservableObject {
     @Published var query: String = ""
@@ -136,6 +137,39 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
         return plist["ExpirationDate"] as? Date
     }()
     
+    // A reminder the day before LiveContainer expires, for when the app isn't opened in time to see the banner.
+    // Rescheduled on every launch, so it follows the current profile after a refresh.
+    static func scheduleExpiryReminder() {
+        guard let expiry = profileExpirationDate else { return }
+        let identifier = "LCExpiryReminder"
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: [identifier])
+        let remindAt = expiry.addingTimeInterval(-24 * 3600)
+        guard remindAt.timeIntervalSinceNow > 60 else { return }
+        
+        let schedule = {
+            let content = UNMutableNotificationContent()
+            content.title = "lc.appList.expiresTomorrow".loc
+            content.body = "lc.appList.expiryDesc".loc
+            content.sound = .default
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(60, remindAt.timeIntervalSinceNow), repeats: false)
+            center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: trigger))
+        }
+        center.getNotificationSettings { settings in
+            switch settings.authorizationStatus {
+            case .authorized, .provisional, .ephemeral:
+                schedule()
+            case .notDetermined:
+                // provisional: no permission prompt, the reminder is delivered quietly to Notification Center
+                center.requestAuthorization(options: [.alert, .sound, .provisional]) { granted, _ in
+                    if granted { schedule() }
+                }
+            default:
+                break
+            }
+        }
+    }
+    
     static func expiryText(for expiry: Date) -> String {
         let calendar = Calendar.current
         let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: Date()), to: calendar.startOfDay(for: expiry)).day ?? 0
@@ -259,6 +293,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
             .onAppear {
                 if !didAppear {
                     onAppear()
+                    Self.scheduleExpiryReminder()
                 }
             }
             

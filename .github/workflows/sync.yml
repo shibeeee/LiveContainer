@@ -1,12 +1,14 @@
 name: Fork - Sync Upstream
 
-# Every 6 hours: merge new commits from LiveContainer/LiveContainer into this fork's main,
+# Every hour: merge new commits from LiveContainer/LiveContainer into this fork's main,
 # and rebuild when upstream, SideStore's source or its nightly changed since the last
 # fork release. Opens an issue on this fork when a merge needs a person.
 
 on:
   schedule:
-    - cron: '17 */6 * * *'
+    # hourly: GitHub delays or drops scheduled runs under load (it skipped a whole day here),
+    # and a run that finds nothing to do takes seconds
+    - cron: '17 * * * *'
   workflow_dispatch:
 
 concurrency:
