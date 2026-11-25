@@ -17,6 +17,8 @@ Patches apply in name order with `git apply --3way`.
 | `001-refresh-all-apps-never-hangs.patch` | The Refresh All Apps action could hang forever when SideStore failed to start the refresh (`try?` dropped the error and never finished). It now reports the error. Inside LiveContainer's background process it also waits for the refresh to finish instead of asking to continue in the foreground after 27 seconds, which failed the shortcut there. |
 | `SideSign/001-clear-sign-in-rejection-error.patch` | When Apple's sign-in server answers with an HTML error page (HTTP 429 or 5xx), show what to do instead of "Invalid server response: unparseable format". |
 | `SideSign/002-increased-memory-limit-for-free-teams.patch` | Enable the Increased Memory Limit capability for free accounts ([SideStore#1616](https://github.com/SideStore/SideStore/issues/1616)). From SideStore/SideSign pull request 4 by playportdev. |
+| `SideSign/003-anisette-v3-identifier-base64.patch` | Send the device identifier to anisette v3 servers as Base64, as the protocol expects, instead of hex. Strict servers such as anisette-server-rs rejected hex with "InvalidIdentifier" ([SideStore#1778](https://github.com/SideStore/SideStore/issues/1778)). anisette data set up with hex keeps using hex until it's reset, so nobody signed in today is affected. |
+| `SideSign/004-explain-error-22410.patch` | Error -22410 means the saved anisette data (adi.pb) was set up under an older device identity. Say to use Repair SideStore Sign-In instead of showing only the code. |
 
 The Apple ID sign-in 503 fix is not a patch here: it lives in
 [`SideStoreSupport/SideStoreHooks.m`](../SideStoreSupport/SideStoreHooks.m), so it also covers the

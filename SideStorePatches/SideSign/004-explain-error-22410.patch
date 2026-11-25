@@ -1,0 +1,19 @@
+diff --git a/Sources/DeveloperPortal/Authentication.swift b/Sources/DeveloperPortal/Authentication.swift
+index e78e143..52e4c07 100644
+--- a/Sources/DeveloperPortal/Authentication.swift
++++ b/Sources/DeveloperPortal/Authentication.swift
+@@ -378,6 +378,14 @@ public extension DeveloperPortal {
+                 throw DeveloperPortalError.appSpecificPasswordRequired(cause: errorDesc)
+             case GrandSlamAuthErrorCodes.incorrectVerificationCode:
+                 throw DeveloperPortalError.incorrectVerificationCode(cause: errorDesc)
++            case -22410:
++                // Apple accepted the anisette data but its device identity doesn't match: adi.pb was set up
++                // under an older client identity (for example before the macOS; -> Mac OS X; change).
++                // Retrying can't fix it; resetting adi.pb does.
++                throw ServerError.underlyingError(
++                    code: errorCode,
++                    message: "Apple didn't accept this device's saved sign-in data. In LiveContainer's Settings, tap Repair SideStore Sign-In (or reset adi.pb in SideStore), then sign in again"
++                )
+             default:
+                 throw ServerError.underlyingError(code: errorCode, message: errorDesc ?? "Authentication failed")
+             }

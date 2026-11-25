@@ -2,6 +2,9 @@ name: Xcode - Build
 
 on: 
   push:
+    # work branches are built on demand (Run workflow) instead, to halve macOS minutes
+    branches-ignore:
+      - 'claude/**'
     paths-ignore:
       - '**.md'
   pull_request:

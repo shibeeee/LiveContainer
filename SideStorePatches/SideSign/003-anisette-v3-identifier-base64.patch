@@ -1,0 +1,47 @@
+diff --git a/Sources/Anisette/RemoteAnisetteDataProvider.swift b/Sources/Anisette/RemoteAnisetteDataProvider.swift
+index 26c596a..352f074 100644
+--- a/Sources/Anisette/RemoteAnisetteDataProvider.swift
++++ b/Sources/Anisette/RemoteAnisetteDataProvider.swift
+@@ -50,13 +50,23 @@ public struct RemoteAnisetteDataProvider: AnisetteDataProvider, Sendable {
+         self.serverURL = serverURL
+     }
+ 
++    // Anisette v3 servers expect the 16-byte identifier as Base64 (the reference server decodes it
++    // with Base64.decode; strict servers reject anything else with InvalidIdentifier). This provider
++    // used to send hex. adi.pb provisioned that way is tied to the hex-derived identity, so keep
++    // sending hex for it, and Base64 for adi.pb provisioned from now on.
++    private static let identifierBase64Key = "SideSignRemoteAnisetteIdentifierBase64"
++
++    private static func encodedIdentifier(_ identifier: [UInt8], base64: Bool) -> String {
++        base64 ? Data(identifier).base64EncodedString() : identifier.map { String(format: "%02x", $0) }.joined()
++    }
++
+     public func getAnisetteHeaders(
+         libDir: String,
+         provisioningDir: String,
+         identifier: [UInt8],
+         adiPb: [UInt8]
+     ) async throws -> AnisetteDataResponse {
+-        let cleanIdentifier = identifier.map { String(format: "%02x", $0) }.joined()
++        let cleanIdentifier = Self.encodedIdentifier(identifier, base64: UserDefaults.standard.bool(forKey: Self.identifierBase64Key))
+         let baseURL = serverURL.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+ 
+         // 1. If adiPb is present, attempt v3 /v3/get_headers
+@@ -124,7 +134,7 @@ public struct RemoteAnisetteDataProvider: AnisetteDataProvider, Sendable {
+         let webSocketTask = URLSession.shared.webSocketTask(with: webSocketURL)
+         webSocketTask.resume()
+ 
+-        let cleanIdentifier = identifier.map { String(format: "%02x", $0) }.joined()
++        let cleanIdentifier = Self.encodedIdentifier(identifier, base64: true)
+ 
+         do {
+             while true {
+@@ -191,6 +201,8 @@ public struct RemoteAnisetteDataProvider: AnisetteDataProvider, Sendable {
+                       let adiPbData = Data(base64Encoded: adiPbStr), !adiPbData.isEmpty else {
+                     throw AnisetteError.badServerResponse(statusCode: -1, payload: "Missing/invalid adi_pb in ProvisioningSuccess")
+                 }
++                // this adi.pb was provisioned with the Base64 identifier (see startProvision)
++                UserDefaults.standard.set(true, forKey: Self.identifierBase64Key)
+                 return adiPbData
+ 
+             default:

@@ -89,6 +89,11 @@ What this fork fixes in automatic refresh:
   shows "sign-in fix on" when it is active.
 - When Apple still turns a sign-in away (HTTP 429 or 5xx), SideStore says what to do instead of
   "Invalid server response: unparseable format".
+- Error **-22410** (saved anisette data set up under an older device identity, common right after the
+  503 fix) now says to use Repair SideStore Sign-In instead of showing only the code.
+- Remote anisette servers get the device identifier in Base64, as the anisette v3 protocol expects.
+  Strict servers such as anisette-server-rs used to reject SideStore's hex identifier with
+  "InvalidIdentifier" ([SideStore#1778](https://github.com/SideStore/SideStore/issues/1778)).
 - **Repair SideStore Sign-In** (LiveContainer Settings) signs the built-in SideStore out and clears its
   anisette data (adi.pb). Your apps and signing certificate are kept. SideStore opens so you can sign in
   again.
@@ -164,7 +169,8 @@ Actions tab and re-enable "Fork - Sync Upstream".
 ## Build it yourself
 
 Run "Fork - Build and Release Nightly" from the Actions tab; tick **stable** to also publish a full
-release. Pushing to any branch builds both IPAs as artifacts with "Xcode - Build". Builds run on
+release. Pushing to `main` builds both IPAs as artifacts with "Xcode - Build"; other branches build when
+you run that workflow on them by hand. Builds run on
 GitHub's `xcode-27` macOS runner and need no secrets.
 
 A build takes about 8 minutes when SideStore has to be compiled, and should take about 3 minutes otherwise: the built
@@ -183,8 +189,16 @@ The build scripts are in [`.github/`](.github):
 
 - **Sign-in still says 503:** wait a few minutes, since repeated failed attempts cause a temporary 503 of
   their own. Then use **Repair SideStore Sign-In** and sign in again.
-- **Other sign-in errors (-22410, 403, -45061):** these come from account or anisette state. Use
-  **Repair SideStore Sign-In**, or switch the anisette server to jkcoxson.
+- **-22410 when signing in:** the saved anisette data no longer matches. Use **Repair SideStore
+  Sign-In**, then sign in again.
+- **Other sign-in errors (403, -45061, -45063, 401 from the PTM/TK endpoint):** these come from account or
+  anisette state. Use **Repair SideStore Sign-In**, or turn off On-Device Anisette and pick the jkcoxson
+  server.
+- **"LiveContainer is no longer available" after 7 days although automations ran:** reinstall
+  LiveContainer+SideStore from inside SideStore (My Apps, or Install IPA with the latest release). That
+  refreshed the profile for the reporter of
+  [LiveContainer#1759](https://github.com/LiveContainer/LiveContainer/issues/1759). The expiry banner and
+  reminder give you warning before this happens.
 - **A nightly misbehaves:** install the previous `build-<version>` release with iloader.
 - **Reporting a problem:** tap **Copy Diagnostics** in LiveContainer's Settings and include the result.
 
