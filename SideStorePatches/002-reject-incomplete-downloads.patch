@@ -1,0 +1,54 @@
+diff --git a/SideStore/Core/Operations/StandaloneOperations/DownloadAppOperation.swift b/SideStore/Core/Operations/StandaloneOperations/DownloadAppOperation.swift
+index e273a1c..35b9067 100644
+--- a/SideStore/Core/Operations/StandaloneOperations/DownloadAppOperation.swift
++++ b/SideStore/Core/Operations/StandaloneOperations/DownloadAppOperation.swift
+@@ -170,7 +170,7 @@ final class DownloadAppOperation: BasePipelineOperation<InstallAppOperationConte
+             self.setProgress(75)
+         } else {
+             // Regular app
+-            fileURL = try await downloadFile(from: sourceURL)
++            fileURL = try await downloadFileRetrying(from: sourceURL)
+         }
+         
+         defer {
+@@ -223,6 +223,21 @@ final class DownloadAppOperation: BasePipelineOperation<InstallAppOperationConte
+         return appBundle
+     }
+     
++    // A dropped connection used to surface much later as "Archive appears to be corrupt".
++    // Retry the download a couple of times when the connection is what failed.
++    func downloadFileRetrying(from downloadURL: URL, attempts: Int = 3) async throws -> URL {
++        var attempt = 1
++        while true {
++            do {
++                return try await downloadFile(from: downloadURL)
++            } catch let error as URLError where attempt < attempts && [.networkConnectionLost, .timedOut, .notConnectedToInternet, .cannotConnectToHost].contains(error.code) {
++                debugLog("[DownloadAppOperation] download attempt \(attempt) failed (\(error.code.rawValue)), retrying")
++                attempt += 1
++                try await Task.sleep(nanoseconds: 2_000_000_000)
++            }
++        }
++    }
++    
+     func downloadFile(from downloadURL: URL) async throws -> URL {
+         debugLog("[DownloadAppOperation] download started: \(downloadURL)")
+         let fileURL: URL = try await withCheckedThrowingContinuation { continuation in
+@@ -373,6 +388,18 @@ private final class DownloadProgressDelegate: NSObject, URLSessionDownloadDelega
+                 finish(with: .failure(error))
+                 return
+             }
++            // any other error status is an error page, not the app
++            if resp.statusCode >= 400 {
++                finish(with: .failure(URLError(.badServerResponse, userInfo: [NSLocalizedDescriptionKey: "The server returned HTTP \(resp.statusCode) instead of the app. Try again later."])))
++                return
++            }
++        }
++        // a connection that drops can still end in didFinishDownloadingTo with a short file
++        let expected = downloadTask.countOfBytesExpectedToReceive
++        let received = downloadTask.countOfBytesReceived
++        if expected > 0 && received < expected {
++            finish(with: .failure(URLError(.networkConnectionLost, userInfo: [NSLocalizedDescriptionKey: "The download was incomplete (\(received) of \(expected) bytes). Check your connection and try again."])))
++            return
+         }
+         let tempDestination = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".tmp")
+         do {

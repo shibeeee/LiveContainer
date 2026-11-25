@@ -28900,6 +28900,16 @@
         }
       }
     },
+    "lc.sources.addFromClipboard" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Sources from Clipboard"
+          }
+        }
+      }
+    },
     "lc.sources.addSource" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -29078,6 +29088,16 @@
         }
       }
     },
+    "lc.sources.addedFromClipboard %lld %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Added %lld sources. Skipped %lld that were already added or not sources."
+          }
+        }
+      }
+    },
     "lc.sources.badge.beta" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -29169,6 +29189,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "測試版"
+          }
+        }
+      }
+    },
+    "lc.sources.copiedLinks %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copied %lld source links."
+          }
+        }
+      }
+    },
+    "lc.sources.copyLinks" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy Source Links"
           }
         }
       }
@@ -29987,6 +30027,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无可用的推荐源。"
+          }
+        }
+      }
+    },
+    "lc.sources.more" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "More"
           }
         }
       }

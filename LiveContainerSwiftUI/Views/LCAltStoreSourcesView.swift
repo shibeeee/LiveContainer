@@ -181,6 +181,28 @@ final class AltStoreSourcesViewModel: ObservableObject {
         return nil
     }
     
+    // Every source link, one per line, for sharing or backing up (#1749).
+    var sourceLinksText: String {
+        sources.map { $0.url.absoluteString }.joined(separator: "\n")
+    }
+    
+    // Adds every http(s) link found in the text; anything else is ignored.
+    func addSources(fromText text: String) async -> (added: Int, skipped: Int) {
+        let links = text.components(separatedBy: .whitespacesAndNewlines)
+            .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: ",;\"'<>()[]")) }
+            .filter { $0.lowercased().hasPrefix("http://") || $0.lowercased().hasPrefix("https://") }
+        var added = 0
+        var skipped = 0
+        for link in links {
+            if await addSource(from: link) == nil {
+                added += 1
+            } else {
+                skipped += 1
+            }
+        }
+        return (added, skipped)
+    }
+    
     func removeSource(_ item: SourceItem) {
         sources.removeAll { $0.id == item.id }
         persistSources()
@@ -486,6 +508,7 @@ private extension Color {
 struct LCSourcesView: View {
     @StateObject private var viewModel = AltStoreSourcesViewModel()
     @State private var errorMessage: String?
+    @State private var infoMessage: String?
     @State private var sourcePendingRemoval: AltStoreSourcesViewModel.SourceItem?
     @ObservedObject public var searchContext: SearchContext = SearchContext()
     @State private var expandedSources: Set<URL> = []
@@ -559,9 +582,33 @@ struct LCSourcesView: View {
                         isManagingSources = true
                     }
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button("lc.sources.copyLinks".loc, systemImage: "doc.on.doc") {
+                            UIPasteboard.general.string = viewModel.sourceLinksText
+                            infoMessage = String(format: "lc.sources.copiedLinks %lld".loc, viewModel.sources.count)
+                        }
+                        .disabled(viewModel.sources.isEmpty)
+                        Button("lc.sources.addFromClipboard".loc, systemImage: "doc.on.clipboard") {
+                            let text = UIPasteboard.general.string ?? ""
+                            Task {
+                                let result = await viewModel.addSources(fromText: text)
+                                infoMessage = String(format: "lc.sources.addedFromClipboard %lld %lld".loc, result.added, result.skipped)
+                            }
+                        }
+                    } label: {
+                        Label("lc.sources.more".loc, systemImage: "ellipsis.circle")
+                    }
+                }
             }
         }
         .navigationViewStyle(StackNavigationViewStyle())
+        .alert(infoMessage ?? "", isPresented: Binding<Bool>(
+            get: { infoMessage != nil },
+            set: { if !$0 { infoMessage = nil } })
+        ) {
+            Button("lc.common.ok".loc, role: .cancel) { infoMessage = nil }
+        }
         .alert("lc.common.error".loc, isPresented: Binding<Bool>(
             get: { errorMessage != nil },
             set: { if !$0 { errorMessage = nil } })

@@ -103,6 +103,9 @@ What this fork fixes in automatic refresh:
   `LiveContainerSupport`) with the patches in [`SideStorePatches/`](SideStorePatches/README.md).
 - Free accounts keep the Increased Memory Limit capability
   ([SideStore#1616](https://github.com/SideStore/SideStore/issues/1616)).
+- App downloads that drop partway are retried, and an incomplete download or server error page is reported
+  as such instead of "Archive appears to be corrupt"
+  ([SideStore#1757](https://github.com/SideStore/SideStore/issues/1757)).
 - If the source build ever fails, the prebuilt SideStore nightly is used. The release notes, SideStore's
   update screen and Copy Diagnostics then say the patches are missing.
 
@@ -120,6 +123,8 @@ What this fork fixes in automatic refresh:
 - **App list:** a **Show** menu inside the sort menu filters All, Shared, Private or JIT apps
   ([#1573](https://github.com/LiveContainer/LiveContainer/issues/1573)). It resets to All each launch.
 - **Update check** in Settings ([#336](https://github.com/LiveContainer/LiveContainer/issues/336)).
+- **Sources:** the **⋯** menu in the Sources tab copies all your source links, or adds every source link
+  on the clipboard at once ([#1749](https://github.com/LiveContainer/LiveContainer/issues/1749)).
 - **Back Up Data Folder** in an app's long-press menu copies its data folder to Files.
 - **Copy Diagnostics** in Settings copies LiveContainer, iOS, device and SideStore versions for bug
   reports. Nothing about your account is included.
@@ -135,6 +140,8 @@ What this fork fixes in automatic refresh:
 | Refresh All Apps (for automations) | Shortcuts app → LiveContainer |
 | Show filter | Apps tab → sort menu (top right) → Show |
 | Back Up Data Folder | Long-press an app in the Apps tab |
+| Copy Source Links, Add Sources from Clipboard | Sources tab → ⋯ (top right) |
+| A link that opens one app directly | Long-press an app → Add to Home Screen → Copy Launch URL (use it with Shortcuts' Open URLs action) |
 | Restart App | The "This app has been terminated" screen of a native multitask window |
 | Skip terminated screen, Restart app automatically | Settings → Multitask |
 | Bring to Front, Minimize, Close | Long-press an app in the multitask dock |
