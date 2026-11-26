@@ -1,0 +1,75 @@
+diff --git a/AltStore/Managing Apps/AppManager.swift b/AltStore/Managing Apps/AppManager.swift
+index 9397828..128d92c 100644
+--- a/AltStore/Managing Apps/AppManager.swift	
++++ b/AltStore/Managing Apps/AppManager.swift	
+@@ -70,6 +70,13 @@ final class AppManager: ObservableObject, @unchecked Sendable
+     }
+ 
+     func reconcileInstalledApps() async {
++        // Until DatabaseManager has started, prepareDatabase may be caching SideStore's own bundle under a
++        // fingerprint the database doesn't list yet, and pruning would delete that new payload
++        // ("context.targetAppBundle is nil" on the next refresh, and a blank icon).
++        guard DatabaseManager.shared.isStarted else {
++            debugLog("[AppManager] Skipping reconcileInstalledApps: database not started yet")
++            return
++        }
+         guard !self.isActivelyManagingAnyApp else {
+             debugLog("[AppManager] Skipping reconcileInstalledApps: operations in progress")
+             return
+diff --git a/SideStore/Core/Operations/PipelineOperations/CacheAppOperation.swift b/SideStore/Core/Operations/PipelineOperations/CacheAppOperation.swift
+index 7e3e322..73d19ed 100644
+--- a/SideStore/Core/Operations/PipelineOperations/CacheAppOperation.swift
++++ b/SideStore/Core/Operations/PipelineOperations/CacheAppOperation.swift
+@@ -40,11 +40,32 @@ final class CacheAppOperation: BasePipelineOperation<InstallAppOperationContext,
+         }
+ 
+         let targetFileURL = InstalledApp.payloadURL(forSignature: signature)
+-        if !FileManager.default.fileExists(atPath: targetFileURL.path) {
++        let fileManager = FileManager.default
++        if fileManager.fileExists(atPath: targetFileURL.path), !isUsableCachedPayload(targetFileURL, for: bundleURL) {
++            // The fingerprint only covers file names and sizes, so a payload left by an interrupted copy, or one
++            // of another version whose files happen to have the same sizes, can match it. Don't reuse those.
++            SideStore.debugLog("[CacheAppOperation] Cached payload for signature \(signature) is incomplete or another version, replacing it.")
++            try fileManager.removeItem(at: targetFileURL)
++        }
++        if !fileManager.fileExists(atPath: targetFileURL.path) {
+             let parentDir = targetFileURL.deletingLastPathComponent()
+-            try FileManager.default.createDirectory(at: parentDir, withIntermediateDirectories: true, attributes: nil)
++            try fileManager.createDirectory(at: parentDir, withIntermediateDirectories: true, attributes: nil)
+             SideStore.debugLog("[CacheAppOperation] Caching app bundle for signature \(signature) to \(targetFileURL.path)")
+-            try FileManager.default.copyItem(at: bundleURL, to: targetFileURL, shouldReplace: true)
++            // Copy next to the target and move it into place, so an interrupted copy never looks cached.
++            if let leftovers = try? fileManager.contentsOfDirectory(at: parentDir, includingPropertiesForKeys: nil) {
++                for leftover in leftovers where leftover.lastPathComponent.hasPrefix("App.app.partial-") {
++                    try? fileManager.removeItem(at: leftover)
++                }
++            }
++            let partialURL = parentDir.appendingPathComponent("App.app.partial-\(UUID().uuidString)")
++            do {
++                try fileManager.copyItem(at: bundleURL, to: partialURL)
++                try fileManager.moveItem(at: partialURL, to: targetFileURL)
++            } catch {
++                try? fileManager.removeItem(at: partialURL)
++                // another process may have cached the same payload meanwhile
++                guard fileManager.fileExists(atPath: targetFileURL.path) else { throw error }
++            }
+         } else {
+             SideStore.debugLog("[CacheAppOperation] Payload already cached for signature \(signature), skipping copy.")
+         }
+@@ -52,6 +73,16 @@ final class CacheAppOperation: BasePipelineOperation<InstallAppOperationContext,
+         return (signature, targetFileURL)
+     }
+ 
++    /// A cached payload is reused only if it was copied completely and holds the same version as the bundle.
++    private static func isUsableCachedPayload(_ payloadURL: URL, for bundleURL: URL) -> Bool {
++        guard let cached = NSDictionary(contentsOf: payloadURL.appendingPathComponent("Info.plist")) else { return false }
++        guard let source = NSDictionary(contentsOf: bundleURL.appendingPathComponent("Info.plist")) else { return true }
++        for key in ["CFBundleShortVersionString", "CFBundleVersion"] {
++            if (cached[key] as? String) != (source[key] as? String) { return false }
++        }
++        return true
++    }
++
+     static func pruneUnusedCaches(activeSignatures: Set<String> = [], activeBundleIDs: Set<String>, isActivelyManaging: (String) -> Bool) {
+         // 1. Prune unused payloads in Apps/Payloads/
+         let payloadsDirectory = InstalledApp.appsDirectoryURL.appendingPathComponent("Payloads")

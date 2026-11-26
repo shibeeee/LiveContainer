@@ -108,6 +108,8 @@ What this fork fixes in automatic refresh:
   ([SideStore#1757](https://github.com/SideStore/SideStore/issues/1757)).
 - Refreshing LiveContainer no longer fails with "context.targetAppBundle is nil" after an update
   ([SideStore#1763](https://github.com/SideStore/SideStore/issues/1763)), and its icon shows again in My Apps.
+  SideStore's copy of its own app could be deleted during startup, kept half-written after being closed, or
+  kept from an older build; all three are fixed, so a refresh also can't reinstall the previous build.
 - This fork's source is the only one set up by default: the sources earlier builds had built in (upstream
   LiveContainer's and SideStore's) are removed once, so Browse and Updates only offer this fork's
   LiveContainer. You can still add other sources yourself.
