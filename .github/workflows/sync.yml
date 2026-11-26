@@ -95,14 +95,25 @@ jobs:
           echo "SideStore source: $current_src (last release: $last_src)"
           code_changed=false
           if [ "$head" != "$last_commit" ]; then
-            # a change that only touches Markdown files doesn't need a new build
+            # a change that only touches Markdown files or this workflow doesn't need a new build
             if [ -z "$last_commit" ] || ! git cat-file -e "$last_commit^{commit}" 2>/dev/null \
-                || git diff --name-only "$last_commit" "$head" | grep -qv '\.md$'; then
+                || git diff --name-only "$last_commit" "$head" | grep -qv -e '\.md$' -e '^\.github/workflows/sync\.yml$'; then
               code_changed=true
             fi
           fi
           if [ "$code_changed" = true ] || [ "$current_ss" != "$last_ss" ] || [ "$current_src" != "$last_src" ]; then
-            echo "rebuild=true" >> $GITHUB_OUTPUT
+            # don't queue a duplicate behind a release build that is already queued or running:
+            # the next hourly run after it finishes catches anything it didn't include
+            busy=0
+            for status in queued in_progress; do
+              n=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow fork-release.yml --status "$status" --json databaseId --jq length)
+              busy=$((busy + n))
+            done
+            if [ "$busy" -gt 0 ]; then
+              echo "A fork release build is already queued or running, not starting another."
+            else
+              echo "rebuild=true" >> $GITHUB_OUTPUT
+            fi
           fi
 
       - name: Start fork build and release
