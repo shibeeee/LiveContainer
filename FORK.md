@@ -106,6 +106,11 @@ What this fork fixes in automatic refresh:
 - App downloads that drop partway are retried, and an incomplete download or server error page is reported
   as such instead of "Archive appears to be corrupt"
   ([SideStore#1757](https://github.com/SideStore/SideStore/issues/1757)).
+- Refreshing LiveContainer no longer fails with "context.targetAppBundle is nil" after an update
+  ([SideStore#1763](https://github.com/SideStore/SideStore/issues/1763)), and its icon shows again in My Apps.
+- This fork's source is the only one set up by default: the sources earlier builds had built in (upstream
+  LiveContainer's and SideStore's) are removed once, so Browse and Updates only offer this fork's
+  LiveContainer. You can still add other sources yourself.
 - If the source build ever fails, the prebuilt SideStore nightly is used. The release notes, SideStore's
   update screen and Copy Diagnostics then say the patches are missing.
 
@@ -206,6 +211,8 @@ The build scripts are in [`.github/`](.github):
   refreshed the profile for the reporter of
   [LiveContainer#1759](https://github.com/LiveContainer/LiveContainer/issues/1759). The expiry banner and
   reminder give you warning before this happens.
+- **"Failed to refresh … context.targetAppBundle is nil":** fixed in builds newer than 3.8.14010. Update, open SideStore
+  once, then refresh again.
 - **A nightly misbehaves:** install the previous `build-<version>` release with iloader.
 - **Reporting a problem:** tap **Copy Diagnostics** in LiveContainer's Settings and include the result.
 

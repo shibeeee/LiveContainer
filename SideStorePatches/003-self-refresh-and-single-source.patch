@@ -1,0 +1,112 @@
+diff --git a/AltStore/Core/Model/DatabaseManager/DatabaseManager.swift b/AltStore/Core/Model/DatabaseManager/DatabaseManager.swift
+index e5b1afe..482a46d 100644
+--- a/AltStore/Core/Model/DatabaseManager/DatabaseManager.swift
++++ b/AltStore/Core/Model/DatabaseManager/DatabaseManager.swift
+@@ -227,11 +227,34 @@ public class DatabaseManager: @unchecked Sendable
+             // Make sure to always update source URL to be current.
+             try! altStoreSource.setSourceURL(Source.altStoreSourceURL)
+             
++            // LiveContainer fork: there is one StoreApp per bundle ID, shared by every source that lists it,
++            // so a source that used to be built in keeps competing with the current one over which
++            // LiveContainer version Browse and Updates show. Remove the earlier built-in sources, once.
++            let removedLegacySourcesKey = "LCRemovedLegacyBuiltInSources"
++            if !UserDefaults.standard.bool(forKey: removedLegacySourcesKey) {
++                let legacySourceURLs = [
++                    URL(string: "https://github.com/LiveContainer/LiveContainer/releases/download/1.0/apps_ss_lc.json")!,
++                    AppConstants.Sources.sideStoreCommunitySourceURL,
++                ]
++                for sourceURL in legacySourceURLs {
++                    guard let sourceID = try? Source.sourceID(from: sourceURL), sourceID != Source.altStoreIdentifier,
++                          let legacySource = Source.first(satisfying: NSPredicate(format: "%K == %@", #keyPath(Source.identifier), sourceID), in: context)
++                    else { continue }
++                    debugLog("[DatabaseManager] Removing earlier built-in source \(sourceID)")
++                    context.delete(legacySource)
++                }
++                UserDefaults.standard.set(true, forKey: removedLegacySourcesKey)
++            }
++            
+             let storeApp: StoreApp
+             
+             if let app = StoreApp.first(satisfying: NSPredicate(format: "%K == %@", #keyPath(StoreApp.bundleIdentifier), StoreApp.altstoreAppID), in: context)
+             {
+                 storeApp = app
++                if storeApp.source == nil || storeApp.source?.isDeleted == true {
++                    // its source was one of the earlier built-in sources removed above
++                    storeApp.source = altStoreSource
++                }
+             }
+             else
+             {
+diff --git a/AltStore/Core/Model/InstalledApp.swift b/AltStore/Core/Model/InstalledApp.swift
+index ccb7133..fafc5f0 100644
+--- a/AltStore/Core/Model/InstalledApp.swift
++++ b/AltStore/Core/Model/InstalledApp.swift
+@@ -328,6 +328,7 @@ public extension InstalledApp
+         let hasAlternateIcon = self.hasAlternateIcon
+         let alternateIconURL = self.alternateIconURL
+         let fileURL = self.fileURL
++        let isSelf = self.bundleIdentifier == StoreApp.altstoreAppID
+         
+         return try await Task.detached(priority: .userInitiated) {
+             if hasAlternateIcon,
+@@ -337,7 +338,8 @@ public extension InstalledApp
+                 return icon
+             }
+             
+-            let appBundle = ALTApplication(fileURL: fileURL)
++            // SideStore's cached copy of itself can be missing: use the running bundle's icon then
++            let appBundle = ALTApplication(fileURL: fileURL) ?? (isSelf ? ALTApplication(fileURL: Bundle.Info.activeBundleURL) : nil)
+             return appBundle?.icon
+         }.value
+     }
+diff --git a/SideStore/Core/Operations/PipelineRunner.swift b/SideStore/Core/Operations/PipelineRunner.swift
+index a76344e..1edff4d 100644
+--- a/SideStore/Core/Operations/PipelineRunner.swift
++++ b/SideStore/Core/Operations/PipelineRunner.swift
+@@ -343,6 +343,14 @@ final class PipelineRunner: Sendable
+             context.useMainProfile = app.useMainProfile
+             context.customBundleIdentifier = app.customBundleIdentifier
+             context.targetAppBundle = ALTApplication(fileURL: app.fileURL)
++            if context.targetAppBundle == nil, app.bundleIdentifier == StoreApp.altstoreAppID,
++               let (signature, bundle) = recacheRunningSelfBundle() {
++                // SideStore refreshes itself from a cached copy of its own bundle. When that copy is
++                // gone (pruned, or made by another process), cache the running bundle again instead
++                // of failing with "context.targetAppBundle is nil".
++                context.appBundleFingerprint = signature
++                context.targetAppBundle = bundle
++            }
+         }
+         
+         context.beginInstallationHandler = { (installedApp) in
+@@ -386,4 +394,30 @@ extension RefreshGroup {
+     }
+ }
+ 
+-
++/// Copies the running SideStore bundle into the payload cache, with the bundle identifiers
++/// SideStore expects for itself (same steps as DatabaseManager.prepareDatabase).
++private func recacheRunningSelfBundle() -> (signature: String, bundle: ALTApplication)? {
++    guard let localAppBundle = ALTApplication(fileURL: Bundle.Info.activeBundleURL) else { return nil }
++    let altstoreAppID = StoreApp.altstoreAppID
++    var result: (signature: String, bundle: ALTApplication)?
++    FileManager.default.prepareTemporaryURL { temporaryFileURL in
++        do {
++            try FileManager.default.copyItem(at: localAppBundle.fileURL, to: temporaryFileURL)
++            guard let tempAppBundle = ALTApplication(fileURL: temporaryFileURL) else {
++                throw OperationError.invalidApp(reason: "Failed to read the copy of the running SideStore bundle")
++            }
++            try tempAppBundle.updateInfoPlist(with: [kCFBundleIdentifierKey as String: altstoreAppID])
++            for appExtension in tempAppBundle.appExtensions {
++                let originalBundleID = appExtension.bundleIdentifier.replacingOccurrences(of: localAppBundle.bundleIdentifier, with: altstoreAppID)
++                try appExtension.updateInfoPlist(with: [kCFBundleIdentifierKey as String: originalBundleID])
++            }
++            let (signature, targetFileURL) = try CacheAppOperation.cachePayload(for: temporaryFileURL)
++            if let bundle = ALTApplication(fileURL: targetFileURL) {
++                result = (signature, bundle)
++            }
++        } catch {
++            debugLog("[PipelineRunner] Failed to cache the running SideStore bundle: \(error)")
++        }
++    }
++    return result
++}
